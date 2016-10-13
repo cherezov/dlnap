@@ -1,9 +1,9 @@
 # dlnap
-Simple network player for DLNA UPnP devices.  
-It allows discover devices in the local network which are able to play media. 
+Enjoy your favorite music on your favorite sound system over WiFi.  
+Simple network player for DLNA UPnP devices allows you discover devices on your local network and send your favorite media to play on them.
 
 ## Requires
- * Python (tested on CentOS with python 2.7 and python 3.4)
+ * Nothing but python (whatever you like: python 2.7+ or python3)
  
 ## Supported devices
  * Yamaha RX
