@@ -1,5 +1,6 @@
 # dlnap
 Simple network player for DLNA UPnP devices.
+
 It allows discover devices in the local network which are able to play media and play it.
 
 ## Requires
@@ -20,6 +21,7 @@ Discovered devices:
  + Receiver rx577 @ 192.168.1.40
 ```
 "+" means that devices allows playing media
+
 "-" means that device can not play media
 
 #### Playing media
