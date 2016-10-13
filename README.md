@@ -1,9 +1,13 @@
 # dlnap
 Simple network player for DLNA UPnP devices.  
-It allows discover devices in the local network which are able to play media.
+It allows discover devices in the local network which are able to play media. 
 
 ## Requires
  * Python (tested on CentOS with python 2.7 and python 3.4)
+ 
+## Supported devices
+ * Yamaha RX
+ * _please email me if it works or doesn't work with your device_
  
 ## Usage
 ### As console app
