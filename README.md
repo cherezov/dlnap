@@ -30,3 +30,4 @@ Discovered devices:
 ```
 dlnap.py -d rx577 -u 'http://somewhere.com/my_favorite_music.mp3'
 ```
+Note: a part of the device name is quite enough: *rx577* instead of *Receiver rx577*
