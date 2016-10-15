@@ -1,6 +1,6 @@
 # dlnap
 Enjoy your favorite music on your favorite sound system over your local network.  
-Simple network player for DLNA UPnP devices allows you discover devices and send your favorite media to play on them.
+Simple network player for DLNA UPnP devices allows you discover devices and playback your favorite media on them.
 
 ## Requires
  * Nothing but python (whatever you like: python 2.7+ or python3)
