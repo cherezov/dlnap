@@ -13,11 +13,11 @@ Simple network player for DLNA UPnP devices allows you discover devices and play
 ### As console app
 #### Overview
 ```
-dlnap.py [-d <device name>] [-u <url to play>] [-t <timeout>] [-l]
+dlna.py [--list] [-d[evice] <name>] [-t[imeout] <seconds>] [--play <url>]
 ```
 #### Discover UPnP devices
 ```
-> dlnap.py -l
+> dlnap.py --list
 Discovered devices:
  - ZyXEL Keenetic Giga @ 192.168.1.1
  - Data @ 192.168.1.50
@@ -28,6 +28,6 @@ Discovered devices:
 
 #### Play media
 ```
-dlnap.py -d rx577 -u 'http://somewhere.com/my_favorite_music.mp3'
+dlnap.py --device rx577 --play 'http://somewhere.com/my_favorite_music.mp3'
 ```
 Note: a part of the device name is quite enough: *rx577* instead of *Receiver rx577*
