@@ -7,8 +7,9 @@
 # Change log:
 #   0.1 Initial version
 #   0.2 Device renamed to DlnapDevice; DLNAPlayer is disappeared.
+#   0.3 Debug output is added. Extract location url fixed.
 
-__version__ = "0.2"
+__version__ = "0.3"
 
 import re
 import sys
@@ -75,9 +76,9 @@ def _get_location_url(raw):
    raw -- raw discovery response
    return -- location url string
    """
-   for d in raw.split('\r\n'):
-      if d.startswith('LOCATION:'):
-         return d.replace('LOCATION: ', '')
+   for d in raw.split('\r\n').lower():
+      if d.startswith('location:'):
+         return d.replace('location:', '').strip()
    return ''
 
 def _get_friendly_name(raw):
@@ -93,13 +94,14 @@ class DlnapDevice:
    """ Represents DLNA device.
    """
 
-   def __init__(self, raw, ip):
+   def __init__(self, raw, ip, debug=False):
       self.__raw = raw.decode()
       self.ip = ip
       self.port = None
       self.control_url = None
       self.name = None
       self.has_av_transport = False
+      self.debug = debug
 
       try:
          self.location = _get_location_url(self.__raw)
@@ -109,9 +111,10 @@ class DlnapDevice:
          self.has_av_transport = '<serviceType>{}</serviceType>'.format(URN_AVTransport) in self.__desc_xml
          self.control_url = _get_control_url(self.__desc_xml)
       except Exception as e:
-         print(e)
-         print(self.ip)
-         print(self.location)
+         if self.debug:
+            print(e)
+            print(self.ip)
+            print(self.location)
 
    def __repr__(self):
       return '{} @ {}'.format(self.name, self.ip)
@@ -173,13 +176,14 @@ class DlnapDevice:
       self._set_av(url)
       self._play()
 
-def discover(name = '', timeout = 1, st = "ssdp:all", mx = 3):
+def discover(name = '', timeout = 1, st = "ssdp:all", mx = 3, debug = False):
    """ Discover UPnP devices in the local network.
 
    name -- name or part of the name to filter devices
    timeout -- timeout to perform discover
    st -- st field of discovery packet
    mx -- mx field of discovery packet
+   debug -- True if debug output is required
    return -- list of DlnapDevice
    """
    payload = "\r\n".join([
@@ -201,7 +205,7 @@ def discover(name = '', timeout = 1, st = "ssdp:all", mx = 3):
          r, w, x = select.select([sock], [], [sock], 1)
          if sock in r:
              data, addr = sock.recvfrom(1024)
-             d = DlnapDevice(data, addr[0])
+             d = DlnapDevice(data, addr[0], debug=debug)
              if d not in devices:
                 if not name or name is None or name in d.name:
                    devices.append(d)
@@ -219,7 +223,7 @@ if __name__ == '__main__':
       print('dlna.py [--list] [-d[evice] <name>] [-t[imeout] <seconds>] [--play <url>]')
 
    try:
-      opts, args = getopt.getopt(sys.argv[1:], "hvd:t:", ['help', 'version', 'play=', 'pause', 'stop', 'list', 'device=', 'timeout='])
+      opts, args = getopt.getopt(sys.argv[1:], "hvd:t:", ['help', 'version', 'debug', 'play=', 'pause', 'stop', 'list', 'device=', 'timeout='])
    except getopt.GetoptError:
       usage()
       sys.exit(1)
@@ -228,6 +232,7 @@ if __name__ == '__main__':
    url = ''
    timeout = 0.5
    action = ''
+   debug = False
    for opt, arg in opts:
       if opt in ('-h', '--help'):
          usage()
@@ -235,10 +240,12 @@ if __name__ == '__main__':
       if opt in ('-v', '--version'):
          print(__version__)
          sys.exit(0)
+      if opt in ('--debug'):
+         debug = True
       elif opt in ('-d', '--device'):
          device = arg
       elif opt in ('-t', '--timeout'):
-         timeout = arg
+         timeout = float(arg)
       if opt in ('--list'):
          action = 'list'
       elif opt in ('--play'):
@@ -249,7 +256,7 @@ if __name__ == '__main__':
       elif opt in ('--stop'):
          action = 'stop'
 
-   allDevices = discover(name=device, timeout=timeout)
+   allDevices = discover(name=device, timeout=timeout, debug=debug)
    if not allDevices:
       print('No devices found.')
       sys.exit(1)
