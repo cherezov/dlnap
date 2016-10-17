@@ -231,7 +231,7 @@ if __name__ == '__main__':
    import getopt
 
    def usage():
-      print('dlna.py [--list] [-d[evice] <name>] [-t[imeout] <seconds>] [--play <url>]')
+      print('dlnap.py [--list] [-d[evice] <name>] [-t[imeout] <seconds>] [--play <url>]')
 
    try:
       opts, args = getopt.getopt(sys.argv[1:], "hvd:t:", ['help', 'version', 'debug', 'play=', 'pause', 'stop', 'list', 'device=', 'timeout=', 'compatible'])
