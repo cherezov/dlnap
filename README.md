@@ -5,11 +5,11 @@ Simple network player for DLNA/UPnP devices allows you discover devices and play
 ## Requires
  * Nothing but python (whatever you like: python 2.7+ or python3)
  
-## Todo
+## TODO
 - [ ] Stop/Pause playback
 - [ ] Set next media
 - [ ] Integrate local http server to allow playback local files
-- [ ] Investigate if it possible to play images/video's on DLNA powered TV
+- [ ] Investigate if it possible to play images/video's on DLNA/UPnP powered TV
  
 ## Supported devices
  * Yamaha RX577
