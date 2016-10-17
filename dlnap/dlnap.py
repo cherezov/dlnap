@@ -76,7 +76,8 @@ def _get_location_url(raw):
    raw -- raw discovery response
    return -- location url string
    """
-   for d in raw.split('\r\n').lower():
+   for d in raw.split('\r\n'):
+      d = d.lower()
       if d.startswith('location:'):
          return d.replace('location:', '').strip()
    return ''
