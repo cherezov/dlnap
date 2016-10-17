@@ -24,8 +24,8 @@ Discovered devices:
  [a] Receiver rx577 @ 192.168.1.40
 ```  
 where  
-**[a]** means that devices allows media to playback  
-**[x]** means that device doesn't allow media to playback  
+**[a]** means that devices allows media playback  
+**[x]** means that device doesn't allow media playback  
 
 Compatible mode will show only devices wich allows playback media
 ```
@@ -34,8 +34,15 @@ Discovered devices:
  [a] Receiver rx577 @ 192.168.1.40
 ```
 
-#### Play media
+#### Playback media
 ```
 dlnap.py --device rx577 --play 'http://somewhere.com/my_favorite_music.mp3'
+Receiver rx577 @ 192.168.1.40
 ```
 Note: a part of the device name is quite enough: *rx577* instead of *Receiver rx577*
+
+#### Playback media on any available compatible device
+```
+dlnap.py --compatible --play 'http://somewhere.com/my_favorite_music.mp3'
+Receiver rx577 @ 192.168.1.40
+```
