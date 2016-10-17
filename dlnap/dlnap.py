@@ -100,7 +100,7 @@ class DlnapDevice:
       self.ip = ip
       self.port = None
       self.control_url = None
-      self.name = None
+      self.name = 'Unknown'
       self.has_av_transport = False
       self.debug = debug
 
@@ -123,7 +123,7 @@ class DlnapDevice:
    def __eq__(self, d):
       return self.name == d.name and self.ip == d.ip
 
-   def _set_av(self, url, instance_id = 0):
+   def set_current(self, url, instance_id = 0):
       payload = """<?xml version="1.0" encoding="utf-8"?>
          <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
             <s:Body>
@@ -149,7 +149,7 @@ class DlnapDevice:
          ])
       _send_tcp((self.ip, self.port), header)
 
-   def _play(self, instance_id=0):
+   def play(self, instance_id=0):
       payload = """<?xml version="1.0" encoding="utf-8"?>
          <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
             <s:Body>
@@ -173,9 +173,17 @@ class DlnapDevice:
            ])
       _send_tcp((self.ip, self.port), header)
 
-   def play(self, url):
-      self._set_av(url)
-      self._play()
+   def pause(self):
+      pass
+
+   def stop(self):
+      pass
+
+   def set_next(self, url):
+      pass
+
+   def next(self):
+      pass
 
 def discover(name = '', timeout = 1, st = "ssdp:all", mx = 3, debug = False):
    """ Discover UPnP devices in the local network.
@@ -208,7 +216,7 @@ def discover(name = '', timeout = 1, st = "ssdp:all", mx = 3, debug = False):
              data, addr = sock.recvfrom(1024)
              d = DlnapDevice(data, addr[0], debug=debug)
              if d not in devices:
-                if not name or name is None or name in d.name:
+                if not name or name is None or name.lower() in d.name.lower():
                    devices.append(d)
          elif sock in x:
              raise Exception('Getting response failed')
@@ -271,7 +279,15 @@ if __name__ == '__main__':
    d = allDevices[0]
    print(d)
    if action == 'play':
-      d.play(url=url)
+      try:
+         d.set_current(url=url)
+         d.play()
+      except Exception as e:
+         print('Device is unable to play media.')
+         if debug:
+            print('Location: {}:{}'.format(d.location, d.port))
+            print(e)
+         sys.exit(1)
    elif action == 'pause':
       d.pause()
    elif action == 'stop':
