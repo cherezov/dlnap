@@ -34,7 +34,7 @@ def _get_port(location):
    location -- string like http://anyurl:port/whatever/path
    return -- port number
    """
-   port = re.findall('http://.*:(\d+).*', location)
+   port = re.findall('http://.*:(\d+)/.*', location)
    return int(port[0]) if port else 80
 
 def _get_control_url(raw):
