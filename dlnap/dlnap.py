@@ -124,7 +124,31 @@ class DlnapDevice:
    def __eq__(self, d):
       return self.name == d.name and self.ip == d.ip
 
+   def _create_packet(action, payload):
+      """ Create packet to send to device control url.
+
+      action -- control action
+      payload -- xml to send to device
+      """
+      header = "\r\n".join([
+         'POST {} HTTP/1.1'.format(self.control_url),
+         'User-Agent: dlnap/{}'.format(__version__),
+         'Accept: */*',
+         'Content-Type: text/xml; charset="utf-8"',
+         'HOST: {}:{}'.format(self.ip, self.port),
+         'Content-Length: {}'.format(len(payload)),
+         'SOAPACTION: "{}#SetAVTransportURI"'.format(URN_AVTransport, action),
+         'Connection: close',
+         '',
+         payload,
+         ])
+
    def set_current(self, url, instance_id = 0):
+      """ Set media to playback.
+
+      url -- media url
+      instance_id -- device instance id
+      """
       payload = """<?xml version="1.0" encoding="utf-8"?>
          <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
             <s:Body>
@@ -136,21 +160,14 @@ class DlnapDevice:
             </s:Body>
          </s:Envelope>""".format(URN_AVTransport, instance_id, url)
 
-      header = "\r\n".join([
-         'POST {} HTTP/1.1'.format(self.control_url),
-         'User-Agent: dlnap/0.1',
-         'Accept: */*',
-         'Content-Type: text/xml; charset="utf-8"',
-         'HOST: {}:{}'.format(self.ip, self.port),
-         'Content-Length: {}'.format(len(payload)),
-         'SOAPACTION: "{}#SetAVTransportURI"'.format(URN_AVTransport),
-         'Connection: close',
-         '',
-         payload,
-         ])
-      _send_tcp((self.ip, self.port), header)
+      packet = self._create_packet('SetAVTransportURI', payload)
+      _send_tcp((self.ip, self.port), packet)
 
    def play(self, instance_id=0):
+      """ Play media that was already set as current.
+
+      instance_id -- device instance id
+      """
       payload = """<?xml version="1.0" encoding="utf-8"?>
          <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
             <s:Body>
@@ -160,19 +177,9 @@ class DlnapDevice:
                </u:Play>
             </s:Body>
          </s:Envelope>""".format(URN_AVTransport, instance_id)
-      header = "\r\n".join([
-           'POST {} HTTP/1.1'.format(self.control_url),
-           'User-Agent: dlnap/0.1',
-           'Accept: */*',
-           'Content-Type: text/xml; charset="utf-8"',
-           'HOST: {}:{}'.format(self.ip, self.port),
-           'Content-Length: {}'.format(len(payload)),
-           'SOAPACTION: "{}#Play"'.format(URN_AVTransport),
-           'Connection: close',
-           '',
-           payload
-           ])
-      _send_tcp((self.ip, self.port), header)
+
+      packet = self._create_packet('Play', payload)
+      _send_tcp((self.ip, self.port), packet)
 
    def pause(self):
       pass
@@ -210,7 +217,7 @@ def discover(name = '', timeout = 1, st = "ssdp:all", mx = 3, compatibleOnly = F
       start = time.time()
       while True:
          if time.time() - start > timeout:
-            # timedout
+            # timed out
             break
          r, w, x = select.select([sock], [], [sock], 1)
          if sock in r:
@@ -231,7 +238,7 @@ if __name__ == '__main__':
    import getopt
 
    def usage():
-      print('dlnap.py [--list] [-d[evice] <name>] [-t[imeout] <seconds>] [--play <url>]')
+      print('dlnap.py [--list] [-d[evice] <name>] [--compatible] [-t[imeout] <seconds>] [--play <url>]')
 
    try:
       opts, args = getopt.getopt(sys.argv[1:], "hvd:t:", ['help', 'version', 'debug', 'play=', 'pause', 'stop', 'list', 'device=', 'timeout=', 'compatible'])
