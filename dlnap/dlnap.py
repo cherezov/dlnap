@@ -5,11 +5,12 @@
 # @brief Python over the network media player to playback on DLNA UPnP devices.
 
 # Change log:
-#   0.1 Initial version
+#   0.1 Initial version.
 #   0.2 Device renamed to DlnapDevice; DLNAPlayer is disappeared.
 #   0.3 Debug output is added. Extract location url fixed.
+#   0.4 Compatible discover mode added.
 
-__version__ = "0.3"
+__version__ = "0.4"
 
 import re
 import sys
@@ -185,7 +186,7 @@ class DlnapDevice:
    def next(self):
       pass
 
-def discover(name = '', timeout = 1, st = "ssdp:all", mx = 3, debug = False):
+def discover(name = '', timeout = 1, st = "ssdp:all", mx = 3, compatibleOnly = False, debug = False):
    """ Discover UPnP devices in the local network.
 
    name -- name or part of the name to filter devices
@@ -217,7 +218,8 @@ def discover(name = '', timeout = 1, st = "ssdp:all", mx = 3, debug = False):
              d = DlnapDevice(data, addr[0], debug=debug)
              if d not in devices:
                 if not name or name is None or name.lower() in d.name.lower():
-                   devices.append(d)
+                   if not compatibleOnly or d.has_av_transport:
+                      devices.append(d)
          elif sock in x:
              raise Exception('Getting response failed')
          else:
@@ -232,7 +234,7 @@ if __name__ == '__main__':
       print('dlna.py [--list] [-d[evice] <name>] [-t[imeout] <seconds>] [--play <url>]')
 
    try:
-      opts, args = getopt.getopt(sys.argv[1:], "hvd:t:", ['help', 'version', 'debug', 'play=', 'pause', 'stop', 'list', 'device=', 'timeout='])
+      opts, args = getopt.getopt(sys.argv[1:], "hvd:t:", ['help', 'version', 'debug', 'play=', 'pause', 'stop', 'list', 'device=', 'timeout=', 'compatible'])
    except getopt.GetoptError:
       usage()
       sys.exit(1)
@@ -242,6 +244,7 @@ if __name__ == '__main__':
    timeout = 0.5
    action = ''
    debug = False
+   compatibleOnly = False
    for opt, arg in opts:
       if opt in ('-h', '--help'):
          usage()
@@ -251,6 +254,8 @@ if __name__ == '__main__':
          sys.exit(0)
       if opt in ('--debug'):
          debug = True
+      if opt in ('--compatible'):
+         compatibleOnly = True
       elif opt in ('-d', '--device'):
          device = arg
       elif opt in ('-t', '--timeout'):
@@ -265,7 +270,7 @@ if __name__ == '__main__':
       elif opt in ('--stop'):
          action = 'stop'
 
-   allDevices = discover(name=device, timeout=timeout, debug=debug)
+   allDevices = discover(name=device, timeout=timeout, compatibleOnly=compatibleOnly, debug=debug)
    if not allDevices:
       print('No devices found.')
       sys.exit(1)
@@ -273,7 +278,7 @@ if __name__ == '__main__':
    if action in ('', 'list'):
       print('Discovered devices:')
       for d in allDevices:
-         print(' {} {}'.format('+' if d.has_av_transport else '-', d))
+         print(' {} {}'.format('[a]' if d.has_av_transport else '[x]', d))
       sys.exit(0)
 
    d = allDevices[0]
