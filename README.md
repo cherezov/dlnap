@@ -22,9 +22,10 @@ Discovered devices:
  [x] ZyXEL Keenetic Giga @ 192.168.1.1
  [x] Data @ 192.168.1.50
  [a] Receiver rx577 @ 192.168.1.40
-```
-"[a]" means that devices allows media to playback  
-"[x]" means that device doesn't allow media to playback  
+```  
+where  
+**[a]** means that devices allows media to playback  
+**[x]** means that device doesn't allow media to playback  
 
 Compatible mode will show only devices wich allows playback media
 ```
