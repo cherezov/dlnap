@@ -13,7 +13,7 @@ Simple network player for DLNA UPnP devices allows you discover devices and play
 ### As console app
 #### Overview
 ```
-dlna.py [--list] [-d[evice] <name>] [-t[imeout] <seconds>] [--play <url>] [--compatible]
+dlnap.py [--list] [-d[evice] <name>] [-t[imeout] <seconds>] [--play <url>] [--compatible]
 ```
 #### Discover UPnP devices
 ```
