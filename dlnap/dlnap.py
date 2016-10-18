@@ -37,6 +37,94 @@ def _get_port(location):
    port = re.findall('http://.*:(\d+)/.*', location)
    return int(port[0]) if port else 80
 
+def xml2dict(xml, path):
+   """
+
+   <a>
+      <b>value1</b>
+      <b>value2</b>
+      <c/>
+      <d>
+         <e>value4</e>
+      </d>
+   </a>
+
+   { 'a':
+     {
+         'b': [value1, value2],
+         'c': [],
+         'd':
+         {
+           'e': [value4] 
+         }
+     } 
+   }
+
+   """
+   result = {}
+
+   tag_ready = False
+   curr_tag = ''
+
+def get_tag_value(x, i = 0):
+   """
+   return -- (tag, value) pair.
+      e.g
+         <d>
+            <e>value4</e>
+         </d>
+      result is ('d', '<e>value4</e>')
+   """
+   x = x.strip()
+   value = ''
+   tag = ''
+
+   # empty tag like '</tag>'
+   if x[i:].startswith('</'):
+      i += 1
+      while i < len(x) and x[i] != '>': 
+         tag += x[i]
+         i += 1
+      return (tag, '')
+
+   if not x[i:].startswith('<'):
+      raise Exception('bad xml:\n {}'.format(x[i:]))
+
+   i += 1 # < 
+
+   # read top open tag      
+   while i < len(x) and x[i] != '>': 
+      tag += x[i]
+      i += 1
+
+   i += 1 # > 
+
+   while i < len(x):
+      if x[i] == '>' and value.endswith(tag):
+         close_tag_len = len(tag) + 2 # />
+         value = value[:-close_tag_len]
+         break
+      value += x[i]
+      i += 1
+
+   return (tag, value)
+
+
+s =  """
+            <d>
+               <e>value4</e>
+            </d>
+"""
+t, v = get_tag_value(s)
+t1, v1 = get_tag_value(v)
+t2, v2 = get_tag_value(v1)
+print(t, v)
+print(t1, v1)
+print(t2, v1)
+sys.exit(1)
+
+
+
 def _get_control_url(raw):
    """ Extract AVTransport contol url from raw device description xml
 
@@ -78,9 +166,8 @@ def _get_location_url(raw):
    return -- location url string
    """
    for d in raw.split('\r\n'):
-      d = d.lower()
-      if d.startswith('location:'):
-         return d.replace('location:', '').strip()
+      if d.lower().startswith('location:'):
+         return re.findall('location:\s*(.*)\s*', d, re.I)[0]
    return ''
 
 def _get_friendly_name(raw):
@@ -112,8 +199,15 @@ class DlnapDevice:
          self.name = _get_friendly_name(self.__desc_xml)
          self.has_av_transport = '<serviceType>{}</serviceType>'.format(URN_AVTransport) in self.__desc_xml
          self.control_url = _get_control_url(self.__desc_xml)
+
+         if self.ip == '192.168.1.35':
+            print('==NEW DEVICE')
+            print(self.ip)
+            print(self.control_url)
+
       except Exception as e:
          if self.debug:
+            print('==EXCEPTION')
             print(e)
             print(self.ip)
             print(self.location)
@@ -124,7 +218,7 @@ class DlnapDevice:
    def __eq__(self, d):
       return self.name == d.name and self.ip == d.ip
 
-   def _create_packet(action, payload):
+   def _create_packet(self, action, payload):
       """ Create packet to send to device control url.
 
       action -- control action
@@ -137,11 +231,14 @@ class DlnapDevice:
          'Content-Type: text/xml; charset="utf-8"',
          'HOST: {}:{}'.format(self.ip, self.port),
          'Content-Length: {}'.format(len(payload)),
-         'SOAPACTION: "{}#SetAVTransportURI"'.format(URN_AVTransport, action),
+         'SOAPACTION: "{}#{}"'.format(URN_AVTransport, action),
          'Connection: close',
          '',
          payload,
          ])
+
+      print(header)
+      return header
 
    def set_current(self, url, instance_id = 0):
       """ Set media to playback.
@@ -193,7 +290,8 @@ class DlnapDevice:
    def next(self):
       pass
 
-def discover(name = '', timeout = 1, st = "ssdp:all", mx = 3, compatibleOnly = False, debug = False):
+#def discover(name = '', timeout = 1, st = "ssdp:all", mx = 3, compatibleOnly = False, debug = False):
+def discover(name = '', timeout = 1, st = URN_AVTransport, mx = 3, compatibleOnly = False, debug = False):
    """ Discover UPnP devices in the local network.
 
    name -- name or part of the name to filter devices
@@ -292,8 +390,10 @@ if __name__ == '__main__':
    print(d)
    if action == 'play':
       try:
-         d.set_current(url=url)
-         d.play()
+         print('setting url = {}'.format(url))
+         d.set_current(url=url, instance_id = 0)
+         print('playing')
+         d.play(instance_id = 0)
       except Exception as e:
          print('Device is unable to play media.')
          if debug:
