@@ -10,8 +10,9 @@
 #   0.3 Debug output is added. Extract location url fixed.
 #   0.4 Compatible discover mode added.
 #   0.5 xml parser introduced for device descriptions
+#   0.6 xpath introduced to navigate over xml dictionary
 
-__version__ = "0.5"
+__version__ = "0.6"
 
 import re
 import sys
@@ -92,54 +93,94 @@ def _get_tag_value(x, i = 0):
    i += 1 # >
 
    while i < len(x):
-      if x[i] == '>' and value.endswith(tag):
+      value += x[i]
+      if x[i] == '>' and value.endswith('</' + tag + '>'):
          # Note: will not work with xml like <a> <a></a> </a>
          close_tag_len = len(tag) + 2 # />
          value = value[:-close_tag_len]
          break
-      value += x[i]
       i += 1
-   return (tag, value, x[i+1:])
+   return (tag, value[:-1], x[i+1:])
 
 def _xml2dict(s):
    """ Convert xml to dictionary.
 
    <?xml version="1.0"?>
    <a any_tag="tag value">
-      <b>value1</b>
-      <b>value2</b>
+      <b> <bb>value1</bb> </b>
+      <b> <bb>value2</bb> </b>
       </c>
       <d>
          <e>value4</e>
       </d>
+      <g>value</g>
    </a>
 
    =>
 
    { 'a':
      {
-         'b': [value1, value2],
+         'b': [ {'bb':value1}, {'bb':value2} ],
          'c': [],
          'd':
          {
            'e': [value4]
-         }
+         },
+         'g': [value]
      }
    }
    """
    d = {}
    while s:
       tag, value, s = _get_tag_value(s)
+      value = value.strip()
       isXml, dummy, dummy2 = _get_tag_value(value)
+      if tag not in d:
+         d[tag] = []
       if not isXml:
-         if tag not in d:
-            d[tag] = []
          if not value:
             continue
          d[tag].append(value.strip())
       else:
          if tag not in d:
-            d[tag] = _xml2dict(value)
+            d[tag] = []
+         d[tag].append(_xml2dict(value))
+   return d
+
+s = """
+   <?xml version="1.0"?>
+   <a any_tag="tag value">
+      <b><bb>value1</bb></b>
+      <b><bb>value2</bb> <v>value3</v></b>
+      </c>
+      <d>
+         <e>value4</e>
+      </d>
+      <g>value</g>
+   </a>
+"""
+
+def _xpath(d, path):
+   """
+   d -- xml dictionary
+   path -- string path like root/device/serviceList/service@serviceType=URN_AVTransport/controlURL
+   """
+
+   for p in path.split('/'):
+      tag_attr = p.split('@')
+      tag = tag_attr[0]
+      if tag not in d:
+         return None
+
+      attr = tag_attr[1] if len(tag_attr) > 1 else ''
+      if attr:
+         a, aval = attr.split('=')
+         for s in d[tag]:
+            if s[a] == [aval]:
+               d = s
+               break
+      else:
+         d = d[tag][0]
    return d
 
 def _get_control_url(xml):
@@ -148,11 +189,7 @@ def _get_control_url(xml):
    xml -- device description xml
    return -- control url or empty string if wasn't found
    """
-   services = xml['root']['device']['serviceList']['service']
-
-   kvs = [(k, v[0]) for k, v in services.items() if services['serviceType'] == [URN_AVTransport]]
-   url = [v for k, v in kvs if k == 'controlURL']
-   return url[0] if url else ''
+   return _xpath(xml, 'root/device/serviceList/service@serviceType={}/controlURL'.format(URN_AVTransport))
 
 @contextmanager
 def _send_udp(to, payload):
@@ -190,13 +227,13 @@ def _get_location_url(raw):
          return re.findall('location:\s*(.*)\s*', d, re.I)[0]
    return ''
 
-def _get_friendly_name(_xml):
+def _get_friendly_name(xml):
    """ Extract device name from description xml
 
    xml -- device description xml
    return -- device name
    """
-   return _xml['root']['device']['friendlyName'][0]
+   return _xpath(xml, 'root/device/friendlyName')
 
 class DlnapDevice:
    """ Represents DLNA/UPnP device.
@@ -222,7 +259,6 @@ class DlnapDevice:
          self.has_av_transport = len(self.control_url) > 0
       except Exception as e:
          if self.debug:
-            print('==EXCEPTION')
             print(e)
             print(self.ip)
             print(self.location)
