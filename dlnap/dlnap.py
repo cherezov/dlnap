@@ -37,7 +37,7 @@ def _get_port(location):
    location -- string like http://anyurl:port/whatever/path
    return -- port number
    """
-   port = re.findall('http://.*:(\d+)/.*', location)
+   port = re.findall('http://.*?:(\d+).*', location)
    return int(port[0]) if port else 80
 
 def _get_tag_value(x, i = 0):
@@ -161,9 +161,11 @@ s = """
 """
 
 def _xpath(d, path):
-   """
+   """ Return value from xml dictionary at path.
+
    d -- xml dictionary
    path -- string path like root/device/serviceList/service@serviceType=URN_AVTransport/controlURL
+   return -- value at path or None if path not found
    """
 
    for p in path.split('/'):
