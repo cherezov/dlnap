@@ -40,7 +40,8 @@ def _get_port(location):
    return int(port[0]) if port else 80
 
 def _get_tag_value(x, i = 0):
-   """
+   """ Get the nearest to 'i' position xml tag name.
+
    x -- xml string
    i -- position to start searching tag from
    return -- (tag, value) pair.
@@ -155,7 +156,7 @@ def _get_control_url(xml):
 
 @contextmanager
 def _send_udp(to, payload):
-   """ Send UDP mesage to group
+   """ Send UDP message to group
 
    to -- (host, port) group to send to payload to
    payload -- message to send
@@ -219,7 +220,6 @@ class DlnapDevice:
          self.name = _get_friendly_name(self.__desc_xml)
          self.control_url = _get_control_url(self.__desc_xml)
          self.has_av_transport = len(self.control_url) > 0
-
       except Exception as e:
          if self.debug:
             print('==EXCEPTION')
@@ -350,6 +350,9 @@ if __name__ == '__main__':
    def usage():
       print('dlnap.py [--list] [-d[evice] <name>] [--all] [-t[imeout] <seconds>] [--play <url>]')
 
+   def version():
+      print(__version__)
+
    try:
       opts, args = getopt.getopt(sys.argv[1:], "hvd:t:", ['help', 'version', 'debug', 'play=', 'pause', 'stop', 'list', 'device=', 'timeout=', 'all'])
    except getopt.GetoptError:
@@ -366,18 +369,18 @@ if __name__ == '__main__':
       if opt in ('-h', '--help'):
          usage()
          sys.exit(0)
-      if opt in ('-v', '--version'):
-         print(__version__)
+      elif opt in ('-v', '--version'):
+         version()
          sys.exit(0)
-      if opt in ('--debug'):
+      elif opt in ('--debug'):
          debug = True
-      if opt in ('--all'):
+      elif opt in ('--all'):
          compatibleOnly = False
       elif opt in ('-d', '--device'):
          device = arg
       elif opt in ('-t', '--timeout'):
          timeout = float(arg)
-      if opt in ('--list'):
+      elif opt in ('--list'):
          action = 'list'
       elif opt in ('--play'):
          action = 'play'
@@ -390,7 +393,7 @@ if __name__ == '__main__':
    st = URN_AVTransport if compatibleOnly else SSDP_ALL
    allDevices = discover(name=device, timeout=timeout, st=st, debug=debug)
    if not allDevices:
-      print('No devices found.')
+      print('No compatible devices found.')
       sys.exit(1)
 
    if action in ('', 'list'):
@@ -403,8 +406,8 @@ if __name__ == '__main__':
    print(d)
    if action == 'play':
       try:
-         d.set_current(url=url, instance_id = 0)
-         d.play(instance_id = 0)
+         d.set_current(url=url)
+         d.play()
       except Exception as e:
          print('Device is unable to play media.')
          if debug:
