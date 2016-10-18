@@ -9,8 +9,9 @@
 #   0.2 Device renamed to DlnapDevice; DLNAPlayer is disappeared.
 #   0.3 Debug output is added. Extract location url fixed.
 #   0.4 Compatible discover mode added.
+#   0.5 xml parser introduced for device descriptions
 
-__version__ = "0.4"
+__version__ = "0.5"
 
 import re
 import sys
@@ -27,6 +28,7 @@ else:
 
 SSDP_GROUP = ("239.255.255.250", 1900)
 URN_AVTransport = "urn:schemas-upnp-org:service:AVTransport:1"
+SSDP_ALL = "ssdp:all"
 
 def _get_port(location):
    """ Extract port number from url.
@@ -37,37 +39,10 @@ def _get_port(location):
    port = re.findall('http://.*:(\d+)/.*', location)
    return int(port[0]) if port else 80
 
-def xml2dict(xml, path):
+def _get_tag_value(x, i = 0):
    """
-
-   <a>
-      <b>value1</b>
-      <b>value2</b>
-      <c/>
-      <d>
-         <e>value4</e>
-      </d>
-   </a>
-
-   { 'a':
-     {
-         'b': [value1, value2],
-         'c': [],
-         'd':
-         {
-           'e': [value4] 
-         }
-     } 
-   }
-
-   """
-   result = {}
-
-   tag_ready = False
-   curr_tag = ''
-
-def get_tag_value(x, i = 0):
-   """
+   x -- xml string
+   i -- position to start searching tag from
    return -- (tag, value) pair.
       e.g
          <d>
@@ -79,59 +54,103 @@ def get_tag_value(x, i = 0):
    value = ''
    tag = ''
 
-   # empty tag like '</tag>'
-   if x[i:].startswith('</'):
-      i += 1
-      while i < len(x) and x[i] != '>': 
-         tag += x[i]
+   # skip <? > tag
+   if x[i:].startswith('<?'):
+      i += 2
+      while i < len(x) and x[i] != '<':
          i += 1
-      return (tag, '')
 
+   # check for empty tag like '</tag>'
+   if x[i:].startswith('</'):
+      i += 2
+      in_attr = False
+      while i < len(x) and x[i] != '>':
+         if x[i] == ' ':
+            in_attr = True
+         if not in_attr:
+            tag += x[i]
+         i += 1
+      return (tag, '', x[i+1:])
+
+   # not an xml, treat like a value
    if not x[i:].startswith('<'):
-      raise Exception('bad xml:\n {}'.format(x[i:]))
+      return ('', x[i:], '')
 
-   i += 1 # < 
+   i += 1 # <
 
-   # read top open tag      
-   while i < len(x) and x[i] != '>': 
-      tag += x[i]
+   # read first open tag
+   in_attr = False
+   while i < len(x) and x[i] != '>':
+      # get rid of attributes
+      if x[i] == ' ':
+         in_attr = True
+      if not in_attr:
+         tag += x[i]
       i += 1
 
-   i += 1 # > 
+   i += 1 # >
 
    while i < len(x):
       if x[i] == '>' and value.endswith(tag):
+         # Note: will not work with xml like <a> <a></a> </a>
          close_tag_len = len(tag) + 2 # />
          value = value[:-close_tag_len]
          break
       value += x[i]
       i += 1
+   return (tag, value, x[i+1:])
 
-   return (tag, value)
+def _xml2dict(s):
+   """ Convert xml to dictionary.
 
+   <?xml version="1.0"?>
+   <a any_tag="tag value">
+      <b>value1</b>
+      <b>value2</b>
+      </c>
+      <d>
+         <e>value4</e>
+      </d>
+   </a>
 
-s =  """
-            <d>
-               <e>value4</e>
-            </d>
-"""
-t, v = get_tag_value(s)
-t1, v1 = get_tag_value(v)
-t2, v2 = get_tag_value(v1)
-print(t, v)
-print(t1, v1)
-print(t2, v1)
-sys.exit(1)
+   =>
 
+   { 'a':
+     {
+         'b': [value1, value2],
+         'c': [],
+         'd':
+         {
+           'e': [value4]
+         }
+     }
+   }
+   """
+   d = {}
+   while s:
+      tag, value, s = _get_tag_value(s)
+      isXml, dummy, dummy2 = _get_tag_value(value)
+      if not isXml:
+         if tag not in d:
+            d[tag] = []
+         if not value:
+            continue
+         d[tag].append(value.strip())
+      else:
+         if tag not in d:
+            d[tag] = _xml2dict(value)
+   return d
 
+def _get_control_url(xml):
+   """ Extract AVTransport contol url from device description xml
 
-def _get_control_url(raw):
-   """ Extract AVTransport contol url from raw device description xml
-
-   raw -- raw device description xml
+   xml -- device description xml
    return -- control url or empty string if wasn't found
    """
-   url = re.findall('\<serviceType\>{}\</serviceType\>.*\<controlURL\>(.*)\</controlURL\>'.format(re.escape(URN_AVTransport)), raw.replace('\n', ''))
+   services = xml['root']['device']['serviceList']['service']
+
+   kvs = [(k, v[0]) for k, v in services.items() if services['serviceType'] == [URN_AVTransport]]
+   url = [v for k, v in kvs if k == 'controlURL']
    return url[0] if url else ''
 
 @contextmanager
@@ -147,7 +166,7 @@ def _send_udp(to, payload):
    sock.close()
 
 def _send_tcp(to, payload):
-   """ Send TCP mesage to group
+   """ Send TCP message to group
 
    to -- (host, port) group to send to payload to
    payload -- message to send
@@ -170,17 +189,16 @@ def _get_location_url(raw):
          return re.findall('location:\s*(.*)\s*', d, re.I)[0]
    return ''
 
-def _get_friendly_name(raw):
-   """ Extract device name from raw description xml
+def _get_friendly_name(_xml):
+   """ Extract device name from description xml
 
-   raw -- device description xml
+   xml -- device description xml
    return -- device name
    """
-   name = re.findall('\<friendlyName\>(.*)\</friendlyName\>', raw)
-   return name[0] if name else 'Unknown'
+   return _xml['root']['device']['friendlyName'][0]
 
 class DlnapDevice:
-   """ Represents DLNA device.
+   """ Represents DLNA/UPnP device.
    """
 
    def __init__(self, raw, ip, debug=False):
@@ -195,15 +213,12 @@ class DlnapDevice:
       try:
          self.location = _get_location_url(self.__raw)
          self.port = _get_port(self.location)
-         self.__desc_xml = urlopen(self.location).read().decode()
-         self.name = _get_friendly_name(self.__desc_xml)
-         self.has_av_transport = '<serviceType>{}</serviceType>'.format(URN_AVTransport) in self.__desc_xml
-         self.control_url = _get_control_url(self.__desc_xml)
+         raw_desc_xml = urlopen(self.location).read().decode()
 
-         if self.ip == '192.168.1.35':
-            print('==NEW DEVICE')
-            print(self.ip)
-            print(self.control_url)
+         self.__desc_xml = _xml2dict(raw_desc_xml)
+         self.name = _get_friendly_name(self.__desc_xml)
+         self.control_url = _get_control_url(self.__desc_xml)
+         self.has_av_transport = len(self.control_url) > 0
 
       except Exception as e:
          if self.debug:
@@ -237,7 +252,6 @@ class DlnapDevice:
          payload,
          ])
 
-      print(header)
       return header
 
    def set_current(self, url, instance_id = 0):
@@ -290,8 +304,7 @@ class DlnapDevice:
    def next(self):
       pass
 
-#def discover(name = '', timeout = 1, st = "ssdp:all", mx = 3, compatibleOnly = False, debug = False):
-def discover(name = '', timeout = 1, st = URN_AVTransport, mx = 3, compatibleOnly = False, debug = False):
+def discover(name = '', timeout = 1, st = SSDP_ALL, mx = 3, debug = False):
    """ Discover UPnP devices in the local network.
 
    name -- name or part of the name to filter devices
@@ -322,9 +335,8 @@ def discover(name = '', timeout = 1, st = URN_AVTransport, mx = 3, compatibleOnl
              data, addr = sock.recvfrom(1024)
              d = DlnapDevice(data, addr[0], debug=debug)
              if d not in devices:
-                if not name or name is None or name.lower() in d.name.lower():
-                   if not compatibleOnly or d.has_av_transport:
-                      devices.append(d)
+                if not name or name.lower() in d.name.lower():
+                   devices.append(d)
          elif sock in x:
              raise Exception('Getting response failed')
          else:
@@ -336,10 +348,10 @@ if __name__ == '__main__':
    import getopt
 
    def usage():
-      print('dlnap.py [--list] [-d[evice] <name>] [--compatible] [-t[imeout] <seconds>] [--play <url>]')
+      print('dlnap.py [--list] [-d[evice] <name>] [--all] [-t[imeout] <seconds>] [--play <url>]')
 
    try:
-      opts, args = getopt.getopt(sys.argv[1:], "hvd:t:", ['help', 'version', 'debug', 'play=', 'pause', 'stop', 'list', 'device=', 'timeout=', 'compatible'])
+      opts, args = getopt.getopt(sys.argv[1:], "hvd:t:", ['help', 'version', 'debug', 'play=', 'pause', 'stop', 'list', 'device=', 'timeout=', 'all'])
    except getopt.GetoptError:
       usage()
       sys.exit(1)
@@ -349,7 +361,7 @@ if __name__ == '__main__':
    timeout = 0.5
    action = ''
    debug = False
-   compatibleOnly = False
+   compatibleOnly = True
    for opt, arg in opts:
       if opt in ('-h', '--help'):
          usage()
@@ -359,8 +371,8 @@ if __name__ == '__main__':
          sys.exit(0)
       if opt in ('--debug'):
          debug = True
-      if opt in ('--compatible'):
-         compatibleOnly = True
+      if opt in ('--all'):
+         compatibleOnly = False
       elif opt in ('-d', '--device'):
          device = arg
       elif opt in ('-t', '--timeout'):
@@ -375,7 +387,8 @@ if __name__ == '__main__':
       elif opt in ('--stop'):
          action = 'stop'
 
-   allDevices = discover(name=device, timeout=timeout, compatibleOnly=compatibleOnly, debug=debug)
+   st = URN_AVTransport if compatibleOnly else SSDP_ALL
+   allDevices = discover(name=device, timeout=timeout, st=st, debug=debug)
    if not allDevices:
       print('No devices found.')
       sys.exit(1)
@@ -390,9 +403,7 @@ if __name__ == '__main__':
    print(d)
    if action == 'play':
       try:
-         print('setting url = {}'.format(url))
          d.set_current(url=url, instance_id = 0)
-         print('playing')
          d.play(instance_id = 0)
       except Exception as e:
          print('Device is unable to play media.')
