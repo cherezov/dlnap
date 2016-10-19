@@ -5,22 +5,27 @@
 # @brief Python over the network media player to playback on DLNA UPnP devices.
 
 # Change log:
-#   0.1 Initial version.
-#   0.2 Device renamed to DlnapDevice; DLNAPlayer is disappeared.
-#   0.3 Debug output is added. Extract location url fixed.
-#   0.4 Compatible discover mode added.
+#   0.1 initial version.
+#   0.2 device renamed to DlnapDevice; DLNAPlayer is disappeared.
+#   0.3 debug output is added. Extract location url fixed.
+#   0.4 compatible discover mode added.
 #   0.5 xml parser introduced for device descriptions
 #   0.6 xpath introduced to navigate over xml dictionary
 #   0.7 device ip argument introduced
+#   0.8 debug output is replaced with standard logging
 
-__version__ = "0.7"
+__version__ = "0.8"
 
 import re
 import sys
 import time
 import socket
 import select
+import logging
+import traceback
 from contextlib import contextmanager
+
+import os
 
 py3 = sys.version_info[0] == 3
 if py3:
@@ -242,29 +247,39 @@ class DlnapDevice:
    """ Represents DLNA/UPnP device.
    """
 
-   def __init__(self, raw, ip, debug=False):
+   def __init__(self, raw, ip):
+      self.__logger = logging.getLogger(self.__class__.__name__)
+      self.__logger.info('=> New DlnapDevice (ip = {}) initialization..'.format(ip))
+
       self.__raw = raw.decode()
       self.ip = ip
       self.port = None
       self.control_url = None
       self.name = 'Unknown'
       self.has_av_transport = False
-      self.debug = debug
 
       try:
          self.location = _get_location_url(self.__raw)
+         self.__logger.info('location: {}'.format(self.location))
+
          self.port = _get_port(self.location)
+         self.__logger.info('port: {}'.format(self.port))
+
          raw_desc_xml = urlopen(self.location).read().decode()
 
          self.__desc_xml = _xml2dict(raw_desc_xml)
+         self.__logger.debug('description xml: {}'.format(self.__desc_xml))
+
          self.name = _get_friendly_name(self.__desc_xml)
+         self.__logger.info('friendlyName: {}'.format(self.name))
+
          self.control_url = _get_control_url(self.__desc_xml)
-         self.has_av_transport = len(self.control_url) > 0
+         self.__logger.info('control_url: {}'.format(self.control_url))
+
+         self.has_av_transport = self.control_url is not None
+         self.__logger.info('=> Initialization completed'.format(ip))
       except Exception as e:
-         if self.debug:
-            print(e)
-            print(self.ip)
-            print(self.location)
+         self.__logger.warning('DlnapDevice (ip = {}) init exception:\n{}'.format(ip, traceback.format_exc()))
 
    def __repr__(self):
       return '{} @ {}'.format(self.name, self.ip)
@@ -280,7 +295,7 @@ class DlnapDevice:
       """
       header = "\r\n".join([
          'POST {} HTTP/1.1'.format(self.control_url),
-         'User-Agent: dlnap/{}'.format(__version__),
+         'User-Agent: {}/{}'.format(__file__, __version__),
          'Accept: */*',
          'Content-Type: text/xml; charset="utf-8"',
          'HOST: {}:{}'.format(self.ip, self.port),
@@ -343,18 +358,18 @@ class DlnapDevice:
    def next(self):
       pass
 
-def discover(name = '', ip = '', timeout = 1, st = SSDP_ALL, mx = 3, debug = False):
+def discover(name = '', ip = '', timeout = 1, st = SSDP_ALL, mx = 3):
    """ Discover UPnP devices in the local network.
 
    name -- name or part of the name to filter devices
    timeout -- timeout to perform discover
    st -- st field of discovery packet
    mx -- mx field of discovery packet
-   debug -- True if debug output is required
    return -- list of DlnapDevice
    """
    payload = "\r\n".join([
               'M-SEARCH * HTTP/1.1',
+              'User-Agent: {}/{}'.format(__file__, __version__),
               'HOST: {}:{}'.format(*SSDP_GROUP),
               'Accept: */*',
               'MAN: "ssdp:discover"',
@@ -375,7 +390,7 @@ def discover(name = '', ip = '', timeout = 1, st = SSDP_ALL, mx = 3, debug = Fal
              if ip and addr[0] != ip:
                 continue
 
-             d = DlnapDevice(data, addr[0], debug=debug)
+             d = DlnapDevice(data, addr[0])
              if d not in devices:
                 if not name or name.lower() in d.name.lower():
                    devices.append(d)
@@ -394,13 +409,13 @@ if __name__ == '__main__':
    import getopt
 
    def usage():
-      print('dlnap.py [--list] [-d[evice] <name>] [--all] [-t[imeout] <seconds>] [--play <url>]')
+      print('{} [--list]  [--ip <device ip>] [-d[evice] <name>] [--all] [-t[imeout] <seconds>] [--play <url>]'.format(__file__))
 
    def version():
       print(__version__)
 
    try:
-      opts, args = getopt.getopt(sys.argv[1:], "hvd:t:i:", ['help', 'version', 'debug', 'ip=', 'play=', 'pause', 'stop', 'list', 'device=', 'timeout=', 'all'])
+      opts, args = getopt.getopt(sys.argv[1:], "hvd:t:i:", ['help', 'version', 'log=', 'ip=', 'play=', 'pause', 'stop', 'list', 'device=', 'timeout=', 'all'])
    except getopt.GetoptError:
       usage()
       sys.exit(1)
@@ -409,7 +424,7 @@ if __name__ == '__main__':
    url = ''
    timeout = 0.5
    action = ''
-   debug = False
+   logLevel = logging.WARN
    compatibleOnly = True
    ip = ''
    for opt, arg in opts:
@@ -419,8 +434,13 @@ if __name__ == '__main__':
       elif opt in ('-v', '--version'):
          version()
          sys.exit(0)
-      elif opt in ('--debug'):
-         debug = True
+      elif opt in ('--log'):
+         if arg.lower() == 'debug':
+             logLevel = logging.DEBUG
+         elif arg.lower() == 'info':
+             logLevel = logging.INFO
+         elif arg.lower() == 'warn':
+             logLevel = logging.WARN
       elif opt in ('--all'):
          compatibleOnly = False
       elif opt in ('-d', '--device'):
@@ -441,8 +461,10 @@ if __name__ == '__main__':
       elif opt in ('--stop'):
          action = 'stop'
 
+   logging.basicConfig(level=logLevel)
+
    st = URN_AVTransport if compatibleOnly else SSDP_ALL
-   allDevices = discover(name=device, ip=ip, timeout=timeout, st=st, debug=debug)
+   allDevices = discover(name=device, ip=ip, timeout=timeout, st=st)
    if not allDevices:
       print('No compatible devices found.')
       sys.exit(1)
@@ -461,9 +483,7 @@ if __name__ == '__main__':
          d.play()
       except Exception as e:
          print('Device is unable to play media.')
-         if debug:
-            print('Location: {}:{}'.format(d.location, d.port))
-            print(e)
+         logging.warn('Play exception:\n{}'.format(traceback.format_exc()))
          sys.exit(1)
    elif action == 'pause':
       d.pause()
