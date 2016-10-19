@@ -22,6 +22,14 @@ Simple network player for DLNA/UPnP devices allows you discover devices and play
 dlnap.py [--list] [--ip <device ip>] [-d[evice] <name>] [-t[imeout] <seconds>] [--play <url>] [--all]
 ```
 #### Discover UPnP devices
+**List compatible devices**
+```
+> dlnap.py --list
+Discovered devices:
+ [a] Receiver rx577 @ 192.168.1.40
+```
+
+**List all UPnP devices**
 ```
 > dlnap.py --list --all
 Discovered devices:
@@ -33,28 +41,22 @@ where
 **[a]** means that devices allows media playback  
 **[x]** means that device doesn't allow media playback  
 
-Compatible mode will show only devices wich allows playback media
-```
-> dlnap.py --list
-Discovered devices:
- [a] Receiver rx577 @ 192.168.1.40
-```
 
 #### Playback media
-By ip address
+**By ip address**
 ```
 dlnap.py --ip 192.168.1.40 'http://somewhere.com/my_favorite_music.mp3'
 Receiver rx577 @ 192.168.1.40
 ```
 
-By name
+**By device name**
 ```
 dlnap.py --device rx577 --play 'http://somewhere.com/my_favorite_music.mp3'
 Receiver rx577 @ 192.168.1.40
 ```
 Note: a part of the device name is quite enough: *rx577* instead of *Receiver rx577*
 
-Any compatible device
+**Any compatible device**
 ```
 dlnap.py --play 'http://somewhere.com/my_favorite_music.mp3'
 Receiver rx577 @ 192.168.1.40
