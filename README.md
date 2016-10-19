@@ -19,7 +19,7 @@ Simple network player for DLNA/UPnP devices allows you discover devices and play
 ### As console app
 #### Overview
 ```
-dlnap.py [--list] [-d[evice] <name>] [-t[imeout] <seconds>] [--play <url>] [--all]
+dlnap.py [--list] [--ip <device ip>] [-d[evice] <name>] [-t[imeout] <seconds>] [--play <url>] [--all]
 ```
 #### Discover UPnP devices
 ```
@@ -41,13 +41,20 @@ Discovered devices:
 ```
 
 #### Playback media
+By ip address
+```
+dlnap.py --ip 192.168.1.40 'http://somewhere.com/my_favorite_music.mp3'
+Receiver rx577 @ 192.168.1.40
+```
+
+By name
 ```
 dlnap.py --device rx577 --play 'http://somewhere.com/my_favorite_music.mp3'
 Receiver rx577 @ 192.168.1.40
 ```
 Note: a part of the device name is quite enough: *rx577* instead of *Receiver rx577*
 
-#### Playback media on any available compatible device
+Any compatible device
 ```
 dlnap.py --play 'http://somewhere.com/my_favorite_music.mp3'
 Receiver rx577 @ 192.168.1.40
