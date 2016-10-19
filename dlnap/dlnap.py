@@ -11,8 +11,9 @@
 #   0.4 Compatible discover mode added.
 #   0.5 xml parser introduced for device descriptions
 #   0.6 xpath introduced to navigate over xml dictionary
+#   0.7 device ip argument introduced
 
-__version__ = "0.6"
+__version__ = "0.7"
 
 import re
 import sys
@@ -342,7 +343,7 @@ class DlnapDevice:
    def next(self):
       pass
 
-def discover(name = '', timeout = 1, st = SSDP_ALL, mx = 3, debug = False):
+def discover(name = '', ip = '', timeout = 1, st = SSDP_ALL, mx = 3, debug = False):
    """ Discover UPnP devices in the local network.
 
    name -- name or part of the name to filter devices
@@ -371,10 +372,17 @@ def discover(name = '', timeout = 1, st = SSDP_ALL, mx = 3, debug = False):
          r, w, x = select.select([sock], [], [sock], 1)
          if sock in r:
              data, addr = sock.recvfrom(1024)
+             if ip and addr[0] != ip:
+                continue
+
              d = DlnapDevice(data, addr[0], debug=debug)
              if d not in devices:
                 if not name or name.lower() in d.name.lower():
                    devices.append(d)
+
+             if ip:
+                # no need in further searching by ip
+                break
          elif sock in x:
              raise Exception('Getting response failed')
          else:
@@ -392,7 +400,7 @@ if __name__ == '__main__':
       print(__version__)
 
    try:
-      opts, args = getopt.getopt(sys.argv[1:], "hvd:t:", ['help', 'version', 'debug', 'play=', 'pause', 'stop', 'list', 'device=', 'timeout=', 'all'])
+      opts, args = getopt.getopt(sys.argv[1:], "hvd:t:i:", ['help', 'version', 'debug', 'ip=', 'play=', 'pause', 'stop', 'list', 'device=', 'timeout=', 'all'])
    except getopt.GetoptError:
       usage()
       sys.exit(1)
@@ -403,6 +411,7 @@ if __name__ == '__main__':
    action = ''
    debug = False
    compatibleOnly = True
+   ip = ''
    for opt, arg in opts:
       if opt in ('-h', '--help'):
          usage()
@@ -418,6 +427,10 @@ if __name__ == '__main__':
          device = arg
       elif opt in ('-t', '--timeout'):
          timeout = float(arg)
+      elif opt in ('-i', '--ip'):
+         ip = arg
+         compatibleOnly = False
+         timeout = 10
       elif opt in ('--list'):
          action = 'list'
       elif opt in ('--play'):
@@ -429,7 +442,7 @@ if __name__ == '__main__':
          action = 'stop'
 
    st = URN_AVTransport if compatibleOnly else SSDP_ALL
-   allDevices = discover(name=device, timeout=timeout, st=st, debug=debug)
+   allDevices = discover(name=device, ip=ip, timeout=timeout, st=st, debug=debug)
    if not allDevices:
       print('No compatible devices found.')
       sys.exit(1)
