@@ -16,12 +16,11 @@ Simple network player for DLNA/UPnP devices allows you discover devices and play
  * _please email me if it works or doesn't work with your device_
  
 ## Usage
-### As console app
-#### Overview
+### Overview
 ```
 dlnap.py [--list] [--ip <device ip>] [-d[evice] <name>] [-t[imeout] <seconds>] [--play <url>] [--all]
 ```
-#### Discover UPnP devices
+### Discover UPnP devices
 **List compatible devices**
 ```
 > dlnap.py --list
@@ -42,7 +41,7 @@ where
 **[x]** means that device doesn't allow media playback  
 
 
-#### Playback media
+### Playback media
 **By ip address**
 ```
 dlnap.py --ip 192.168.1.40 'http://somewhere.com/my_favorite_music.mp3'
