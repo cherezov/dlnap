@@ -13,8 +13,9 @@
 #   0.6 xpath introduced to navigate over xml dictionary
 #   0.7 device ip argument introduced
 #   0.8 debug output is replaced with standard logging
+#   0.9 pause/stop added. Video playback tested on Samsung TV
 
-__version__ = "0.8"
+__version__ = "0.9"
 
 import re
 import sys
@@ -198,13 +199,13 @@ def _xpath(d, path):
          d = d[tag][0]
    return d
 
-def _get_control_url(xml):
+def _get_control_url(xml, urn = URN_AVTransport):
    """ Extract AVTransport contol url from device description xml
 
    xml -- device description xml
    return -- control url or empty string if wasn't found
    """
-   return _xpath(xml, 'root/device/serviceList/service@serviceType={}/controlURL'.format(URN_AVTransport))
+   return _xpath(xml, 'root/device/serviceList/service@serviceType={}/controlURL'.format(urn))
 
 @contextmanager
 def _send_udp(to, payload):
@@ -228,6 +229,13 @@ def _send_tcp(to, payload):
       sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
       sock.connect(to)
       sock.sendall(payload.encode())
+
+      data = sock.recv(2048)
+      data = _xml2dict(data.replace('&lt;', '<').replace('&gt;', '>').replace('&quot;', '"'), True)
+      errorDescription = _xpath(data, 's:Envelope/s:Body/s:Fault/detail/UPnPError/errorDescription')
+      if errorDescription is not None:
+         logging.error(errorDescription)
+      return data
    finally:
       sock.close()
 
@@ -278,6 +286,8 @@ class DlnapDevice:
          self.__logger.debug('description xml: {}'.format(self.__desc_xml))
 
          self.name = _get_friendly_name(self.__desc_xml)
+         if self.name is None:
+            self.name = 'Unknown'
          self.__logger.info('friendlyName: {}'.format(self.name))
 
          self.control_url = _get_control_url(self.__desc_xml)
@@ -294,20 +304,20 @@ class DlnapDevice:
    def __eq__(self, d):
       return self.name == d.name and self.ip == d.ip
 
-   def _create_packet(self, action, payload):
+   def _create_packet(self, action, payload, control_url, urn = URN_AVTransport):
       """ Create packet to send to device control url.
 
       action -- control action
       payload -- xml to send to device
       """
       header = "\r\n".join([
-         'POST {} HTTP/1.1'.format(self.control_url),
+         'POST {} HTTP/1.1'.format(control_url),
          'User-Agent: {}/{}'.format(__file__, __version__),
          'Accept: */*',
          'Content-Type: text/xml; charset="utf-8"',
          'HOST: {}:{}'.format(self.ip, self.port),
          'Content-Length: {}'.format(len(payload)),
-         'SOAPACTION: "{}#{}"'.format(URN_AVTransport, action),
+         'SOAPACTION: "{}#{}"'.format(urn, action),
          'Connection: close',
          '',
          payload,
@@ -332,7 +342,7 @@ class DlnapDevice:
             </s:Body>
          </s:Envelope>""".format(URN_AVTransport, instance_id, url)
 
-      packet = self._create_packet('SetAVTransportURI', payload)
+      packet = self._create_packet('SetAVTransportURI', payload, self.control_url)
       _send_tcp((self.ip, self.port), packet)
 
    def play(self, instance_id=0):
@@ -350,20 +360,86 @@ class DlnapDevice:
             </s:Body>
          </s:Envelope>""".format(URN_AVTransport, instance_id)
 
-      packet = self._create_packet('Play', payload)
+      packet = self._create_packet('Play', payload, self.control_url)
       _send_tcp((self.ip, self.port), packet)
 
-   def pause(self):
-      pass
+   def pause(self, instance_id = 0):
+      """ Pause media that is currently playing back.
 
-   def stop(self):
-      pass
+      instance_id -- device instance id
+      """
+      payload = """<?xml version="1.0" encoding="utf-8"?>
+         <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+            <s:Body>
+               <u:Pause xmlns:u="{}">
+                  <InstanceID>{}</InstanceID>
+                  <Speed>1</Speed>
+               </u:Pause>
+            </s:Body>
+         </s:Envelope>""".format(URN_AVTransport, instance_id)
+
+      packet = self._create_packet('Pause', payload, self.control_url)
+      _send_tcp((self.ip, self.port), packet)
+
+   def stop(self, instance_id = 0):
+      """ Stop media that is currently playing back.
+
+      instance_id -- device instance id
+      """
+      payload = """<?xml version="1.0" encoding="utf-8"?>
+         <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+            <s:Body>
+               <u:Stop xmlns:u="{}">
+                  <InstanceID>{}</InstanceID>
+                  <Speed>1</Speed>
+               </u:Stop>
+            </s:Body>
+         </s:Envelope>""".format(URN_AVTransport, instance_id)
+
+      packet = self._create_packet('Stop', payload, self.control_url)
+      _send_tcp((self.ip, self.port), packet)
 
    def set_next(self, url):
       pass
 
    def next(self):
       pass
+
+   def info(self, instance_id=0):
+      """ Transport info.
+
+      instance_id -- device instance id
+      """
+      payload = """<?xml version="1.0" encoding="utf-8"?>
+         <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+            <s:Body>
+               <u:GetTransportInfo xmlns:u="{}">
+                  <InstanceID>{}</InstanceID>
+               </u:GetTransportInfo>
+            </s:Body>
+         </s:Envelope>""".format(URN_AVTransport, instance_id)
+
+      packet = self._create_packet('GetTransportInfo', payload, self.control_url)
+      data = _send_tcp((self.ip, self.port), packet)
+      print(data)
+
+   def media_info(self, instance_id=0):
+      """ Transport info.
+
+      instance_id -- device instance id
+      """
+      payload = """<?xml version="1.0" encoding="utf-8"?>
+         <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+            <s:Body>
+               <u:GetMediaInfo xmlns:u="{}">
+                  <InstanceID>{}</InstanceID>
+               </u:GetMediaInfo>
+            </s:Body>
+         </s:Envelope>""".format(URN_AVTransport, instance_id)
+
+      packet = self._create_packet('GetMediaInfo', payload, self.control_url)
+      data = _send_tcp((self.ip, self.port), packet)
+      print(data)
 
 def discover(name = '', ip = '', timeout = 1, st = SSDP_ALL, mx = 3):
    """ Discover UPnP devices in the local network.
@@ -399,12 +475,14 @@ def discover(name = '', ip = '', timeout = 1, st = SSDP_ALL, mx = 3):
 
              d = DlnapDevice(data, addr[0])
              if d not in devices:
-                if not name or name.lower() in d.name.lower():
-                   devices.append(d)
+                if not name or name is None or name.lower() in d.name.lower():
+                   if not ip:
+                      devices.append(d)
+                   elif d.has_av_transport:
+                      # no need in further searching by ip
+                      devices.append(d)
+                      break
 
-             if ip:
-                # no need in further searching by ip
-                break
          elif sock in x:
              raise Exception('Getting response failed')
          else:
@@ -417,12 +495,20 @@ if __name__ == '__main__':
 
    def usage():
       print('{} [--list]  [--ip <device ip>] [-d[evice] <name>] [--all] [-t[imeout] <seconds>] [--play <url>]'.format(__file__))
+      print(' --ip <device ip> - ip address for faster access to the known device')
+      print(' --device <device name or part of the name> - discover devices with this name as substring')
+      print(' --all - flag to discover all upnp devices, not only devices with AVTransport ability')
+      print(' --play <url> - set current url for play and start playback it. In case of url is empty - continue playing recent media.')
+      print(' --pause - pause current playback')
+      print(' --stop - stop current playback')
+      print(' --timeout <seconds> - discover timeout')
+      print(' --help - this help')
 
    def version():
       print(__version__)
 
    try:
-      opts, args = getopt.getopt(sys.argv[1:], "hvd:t:i:", ['help', 'version', 'log=', 'ip=', 'play=', 'pause', 'stop', 'list', 'device=', 'timeout=', 'all'])
+      opts, args = getopt.getopt(sys.argv[1:], "hvd:t:i:", ['help', 'version', 'log=', 'ip=', 'play=', 'pause', 'stop', 'list', 'device=', 'timeout=', 'all', 'info', 'media-info'])
    except getopt.GetoptError:
       usage()
       sys.exit(1)
@@ -467,6 +553,10 @@ if __name__ == '__main__':
          action = 'pause'
       elif opt in ('--stop'):
          action = 'stop'
+      elif opt in ('--info'):
+         action = 'info'
+      elif opt in ('--media-info'):
+         action = 'media-info'
 
    logging.basicConfig(level=logLevel)
 
@@ -486,7 +576,9 @@ if __name__ == '__main__':
    print(d)
    if action == 'play':
       try:
-         d.set_current(url=url)
+         if url:
+            d.stop()
+            d.set_current(url=url)
          d.play()
       except Exception as e:
          print('Device is unable to play media.')
@@ -496,3 +588,7 @@ if __name__ == '__main__':
       d.pause()
    elif action == 'stop':
       d.stop()
+   elif action == 'info':
+      d.info()
+   elif action == 'media-info':
+      d.media_info()
