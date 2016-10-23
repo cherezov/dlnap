@@ -108,7 +108,7 @@ def _get_tag_value(x, i = 0):
       i += 1
    return (tag, value[:-1], x[i+1:])
 
-def _xml2dict(s):
+def _xml2dict(s, ignoreUntilXML = False):
    """ Convert xml to dictionary.
 
    <?xml version="1.0"?>
@@ -136,6 +136,9 @@ def _xml2dict(s):
      }
    }
    """
+   if ignoreUntilXML:
+      s = ''.join(re.findall(".*?(<.*)", s, re.M))
+
    d = {}
    while s:
       tag, value, s = _get_tag_value(s)
@@ -154,6 +157,10 @@ def _xml2dict(s):
    return d
 
 s = """
+   hello 
+   this is a bad
+   strings
+
    <?xml version="1.0"?>
    <a any_tag="tag value">
       <b><bb>value1</bb></b>
@@ -422,7 +429,7 @@ if __name__ == '__main__':
 
    device = ''
    url = ''
-   timeout = 0.5
+   timeout = 1
    action = ''
    logLevel = logging.WARN
    compatibleOnly = True
