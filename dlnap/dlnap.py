@@ -585,7 +585,7 @@ if __name__ == '__main__':
    import getopt
 
    def usage():
-      print('{} [--list]  [--ip <device ip>] [-d[evice] <name>] [--all] [-t[imeout] <seconds>] [--play <url>]'.format(__file__))
+      print('{} [--ip <device ip>] [-d[evice] <name>] [--all] [-t[imeout] <seconds>] [--play <url>] [--pause] [--stop] [--proxy]'.format(__file__))
       print(' --ip <device ip> - ip address for faster access to the known device')
       print(' --device <device name or part of the name> - discover devices with this name as substring')
       print(' --all - flag to discover all upnp devices, not only devices with AVTransport ability')
@@ -593,6 +593,8 @@ if __name__ == '__main__':
       print(' --pause - pause current playback')
       print(' --stop - stop current playback')
       print(' --timeout <seconds> - discover timeout')
+      print(' --proxy - use local proxy on proxy port')
+      print(' --proxy-port <port number> - proxy port to listen incomming connections from devices, default 8000')
       print(' --help - this help')
 
    def version():
