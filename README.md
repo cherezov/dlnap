@@ -13,19 +13,29 @@ Simple network player for DLNA/UPnP devices allows you discover devices and play
  
 ## Supported devices
  * Yamaha RX577
+ * Samsung Smart TV (UE40ES5507) via [proxy](https://github.com/cherezov/red)
  * _please email me if it works or doesn't work with your device_
  
 ## Usage
 ### Overview
 ```
-dlnap.py [--list] [--ip <device ip>] [-d[evice] <name>] [-t[imeout] <seconds>] [--play <url>] [--all]
+dlnap.py [--list] [--all] [--ip <device ip>] [-d[evice] <name>] [-t[imeout] <seconds>] [--play <url>]
 ```
+```--ip <device ip>```  ip address for faster access to the known device  
+```--device <device name or part of the name>``` discover devices with this name as substring  
+```--all``` flag to discover all upnp devices, not only devices with AVTransport ability  
+```--play <url>``` set current url for play and start playback it. In case of empty url - continue playing recent media  
+```--pause``` pause current playback  
+```--stop``` stop current playback  
+```--timeout <seconds>``` discover timeout  
+
 ### Discover UPnP devices
 **List compatible devices**
 ```
 > dlnap.py --list
 Discovered devices:
  [a] Receiver rx577 @ 192.168.1.40
+ [a] Samsung TV @ 192.168.1.35
 ```
 
 **List all UPnP devices**
@@ -33,6 +43,7 @@ Discovered devices:
 > dlnap.py --list --all
 Discovered devices:
  [x] ZyXEL Keenetic Giga @ 192.168.1.1
+ [a] Samsung TV @ 192.168.1.35
  [x] Data @ 192.168.1.50
  [a] Receiver rx577 @ 192.168.1.40
 ```  
