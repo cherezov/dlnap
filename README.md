@@ -21,7 +21,7 @@ Simple network player for DLNA/UPnP devices allows you discover devices and play
 ## Usage
 ### Overview
 ```
-dlnap.py [--list] [--all] [--ip <device ip>] [-d[evice] <name>] [-t[imeout] <seconds>] [--play <url>]
+dlnap.py [--ip <device ip>] [-d[evice] <name>] [--play <url>] [--pause] [--stop] [--list] [--all] 
 ```
 ```--ip <device ip>```  ip address for faster access to the known device  
 ```--device <device name or part of the name>``` discover devices with this name as substring  
