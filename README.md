@@ -32,9 +32,9 @@ dlnap.py [--ip <device ip>] [-d[evice] <name>] [--play <url>] [--pause] [--stop]
 ```--timeout <seconds>``` discover timeout  
 
 ### Discover UPnP devices
-**List compatible devices**
+**List devices which are able to playback media only**
 ```
-> dlnap.py --list
+> dlnap.py
 Discovered devices:
  [a] Receiver rx577 @ 192.168.1.40
  [a] Samsung TV @ 192.168.1.35
@@ -42,7 +42,7 @@ Discovered devices:
 
 **List all UPnP devices**
 ```
-> dlnap.py --list --all
+> dlnap.py --all
 Discovered devices:
  [x] ZyXEL Keenetic Giga @ 192.168.1.1
  [a] Samsung TV @ 192.168.1.35
@@ -57,7 +57,13 @@ where
 ### Playback media
 **By ip address**
 ```
-dlnap.py --ip 192.168.1.40 'http://somewhere.com/my_favorite_music.mp3'
+dlnap.py --ip 192.168.1.40 --play 'http://somewhere.com/my_favorite_music.mp3'
+Receiver rx577 @ 192.168.1.40
+
+dlnap.py --ip 192.168.1.40 --pause 'http://somewhere.com/my_favorite_music.mp3'
+Receiver rx577 @ 192.168.1.40
+
+dlnap.py --ip 192.168.1.40 --play ''
 Receiver rx577 @ 192.168.1.40
 ```
 
@@ -74,7 +80,14 @@ dlnap.py --play 'http://somewhere.com/my_favorite_music.mp3'
 Receiver rx577 @ 192.168.1.40
 ```
 
-### Send YouTube videos to smart TV
+### Send YouTube videos to smart TV (in progress)
 ```
-comming soon..
+> dlnap.py --device tv --play https://www.youtube.com/watch?v=q0eWOaLxlso
+Samsung TV @ 192.168.1.35
+```
+
+**generic way**
+```
+> dlnap.py --device tv --proxy --play `youtube-dl -g https://www.youtube.com/watch?v=q0eWOaLxlso`
+Samsung TV @ 192.168.1.35
 ```
