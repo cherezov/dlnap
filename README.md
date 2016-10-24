@@ -93,3 +93,9 @@ Samsung TV @ 192.168.1.35
 > dlnap.py --device tv --proxy --play `any_conversion_tool https://www.youtube.com/watch?v=q0eWOaLxlso`
 Samsung TV @ 192.168.1.35
 ```
+
+### Send images to smart TV (in progress)
+```
+> dlnap.py --device tv --play http://www.somewhere.com/image.jpg
+Samsung TV @ 192.168.1.35
+```
