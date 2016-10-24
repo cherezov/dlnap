@@ -15,8 +15,9 @@
 #   0.8  debug output is replaced with standard logging
 #   0.9  pause/stop added. Video playback tested on Samsung TV
 #   0.10 proxy (draft) is introduced.
+#   0.11 sync proxy for py2 and py3 implemented, --proxy-port added
 
-__version__ = "0.10"
+__version__ = "0.11"
 
 import re
 import sys
@@ -31,14 +32,15 @@ import os
 py3 = sys.version_info[0] == 3
 if py3:
    from urllib.request import urlopen
+   from http.server import HTTPServer
+   from http.server import BaseHTTPRequestHandler
 else:
    from urllib2 import urlopen
+   from BaseHTTPServer import BaseHTTPRequestHandler
+   from BaseHTTPServer import HTTPServer
 
-if not py3:
-   import shutil
-   import urllib2
-   import BaseHTTPServer
-   import threading
+import shutil
+import threading
 
 
 SSDP_GROUP = ("239.255.255.250", 1900)
@@ -80,7 +82,7 @@ def _get_tag_value(x, i = 0):
          if not in_attr:
             tag += x[i]
          i += 1
-      return (tag, '', x[i+1:])
+      return (tag.strip(), '', x[i+1:])
 
    # not an xml, treat like a value
    if not x[i:].startswith('<'):
@@ -108,7 +110,7 @@ def _get_tag_value(x, i = 0):
          value = value[:-close_tag_len]
          break
       i += 1
-   return (tag, value[:-1], x[i+1:])
+   return (tag.strip(), value[:-1], x[i+1:])
 
 def _xml2dict(s, ignoreUntilXML = False):
    """ Convert xml to dictionary.
@@ -204,64 +206,72 @@ def _xpath(d, path):
 # =================================================================================================
 # PROXY
 #
-if not py3:
-   running = False
-   class DownloadProxy(BaseHTTPServer.BaseHTTPRequestHandler):
-      def response_success(self):
-         url = self.path[1:] # replace '/'
-         f = urllib2.urlopen(url=url)
+running = False
+class DownloadProxy(BaseHTTPRequestHandler):
+
+   def log_message(self, format, *args):
+      pass
+
+   def log_request(self, code='-', size='-'):
+      pass
+
+   def response_success(self):
+      url = self.path[1:] # replace '/'
+      f = urlopen(url=url)
+      if py3:
+         content_type = f.getheader("Content-Type")
+      else:
          content_type = f.info().getheaders("Content-Type")[0]
 
-         self.send_response(200, "ok")
-         self.send_header('Access-Control-Allow-Origin', '*')
-         self.send_header('Access-Control-Allow-Methods', 'GET, OPTIONS')
-         self.send_header("Access-Control-Allow-Headers", "X-Requested-With")
-         self.send_header("Access-Control-Allow-Headers", "Content-Type")
-         self.send_header("Content-Type", content_type)
-         self.end_headers()
+      self.send_response(200, "ok")
+      self.send_header('Access-Control-Allow-Origin', '*')
+      self.send_header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+      self.send_header("Access-Control-Allow-Headers", "X-Requested-With")
+      self.send_header("Access-Control-Allow-Headers", "Content-Type")
+      self.send_header("Content-Type", content_type)
+      self.end_headers()
 
-      def do_OPTIONS(self):
-         self.response_success()
+   def do_OPTIONS(self):
+      self.response_success()
 
-      def do_HEAD(self):
-         self.response_success()
+   def do_HEAD(self):
+      self.response_success()
 
-      def do_GET(self):
-         global running
-         print('do_GET begin.')
-         url = self.path[1:] # replace '/'
-
-         if not url or not url.startswith('http'):
-            self.response_success()
-            return
-
-         f = urllib2.urlopen(url=url)
-         try:
-            size = f.info().getheaders("Content-Length")[0]
-            content_type = f.info().getheaders("Content-Type")[0]
-
-            self.send_response(200)
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.send_header("Content-Type", content_type)
-            self.send_header("Content-Disposition", 'attachment; filename="{}"'.format(os.path.basename(url)))
-            self.send_header("Content-Length", str(size))
-            self.end_headers()
-            shutil.copyfileobj(f, self.wfile)
-         finally:
-            running = False
-            f.close()
-         print('do_GET ends.')
-
-   def runProxy(ip = '192.168.1.49', port = 8000):
+   def do_GET(self):
       global running
-      running = True
-      print('runProxy')
-      DownloadProxy.protocol_version = "HTTP/1.0"
-      httpd = BaseHTTPServer.HTTPServer((ip, port), DownloadProxy)
-      while running:
-         print('handle_request')
-         httpd.handle_request()
-      print('runProxy end')
+      url = self.path[1:] # replace '/'
+
+      if not url or not url.startswith('http'):
+         self.response_success()
+         return
+
+      f = urlopen(url=url)
+      try:
+         if py3:
+            content_type = f.getheader("Content-Type")
+            size = f.getheader("Content-Length")
+         else:
+            content_type = f.info().getheaders("Content-Type")[0]
+            size = f.info().getheaders("Content-Length")[0]
+
+         self.send_response(200)
+         self.send_header('Access-Control-Allow-Origin', '*')
+         self.send_header("Content-Type", content_type)
+         self.send_header("Content-Disposition", 'attachment; filename="{}"'.format(os.path.basename(url)))
+         self.send_header("Content-Length", str(size))
+         self.end_headers()
+         shutil.copyfileobj(f, self.wfile)
+      finally:
+         running = False
+         f.close()
+
+def runProxy(ip = '', port = 8000):
+   global running
+   running = True
+   DownloadProxy.protocol_version = "HTTP/1.0"
+   httpd = HTTPServer((ip, port), DownloadProxy)
+   while running:
+      httpd.handle_request()
 
 #
 # PROXY
@@ -310,6 +320,8 @@ def _send_tcp(to, payload):
       sock.sendall(payload.encode())
 
       data = sock.recv(2048)
+      if py3:
+         data = data.decode()
       data = _xml2dict(data.replace('&lt;', '<').replace('&gt;', '>').replace('&quot;', '"'), True)
       errorDescription = _xpath(data, 's:Envelope/s:Body/s:Fault/detail/UPnPError/errorDescription')
       if errorDescription is not None:
@@ -611,7 +623,8 @@ if __name__ == '__main__':
                                                                'media-info',
 
                                                                # download proxy
-                                                               'proxy'])
+                                                               'proxy',
+                                                               'proxy-port='])
    except getopt.GetoptError:
       usage()
       sys.exit(1)
@@ -624,6 +637,7 @@ if __name__ == '__main__':
    compatibleOnly = True
    ip = ''
    proxy = False
+   proxy_port = 8000
    for opt, arg in opts:
       if opt in ('-h', '--help'):
          usage()
@@ -663,6 +677,8 @@ if __name__ == '__main__':
          action = 'media-info'
       elif opt in ('--proxy'):
          proxy = True
+      elif opt in ('--proxy-port'):
+         proxy_port = int(arg)
 
    logging.basicConfig(level=logLevel)
 
@@ -680,16 +696,26 @@ if __name__ == '__main__':
 
    d = allDevices[0]
    print(d)
-   if proxy and not py3:
-      t = threading.Thread(target=runProxy)
-      t.daemon = True
+
+   if url.lower().replace('https://', '').replace('www.', '').startswith('youtube.'):
+      import subprocess
+      process = subprocess.Popen(['youtube-dl', '-g', url], stdout = subprocess.PIPE)
+      url, err = process.communicate()
+
+   if url.lower().startswith('https://'):
+      proxy = True
+
+   if proxy:
+      ip = socket.gethostbyname(socket.gethostname())
+      t = threading.Thread(target=runProxy, kwargs={'ip' : ip, 'port' : proxy_port})
       t.start()
+      time.sleep(2)
 
    if action == 'play':
       try:
-         if url:
-            d.stop()
-            d.set_current(url=url)
+         d.stop()
+         url = 'http://{}:{}/{}'.format(ip, proxy_port, url) if proxy else url
+         d.set_current(url=url)
          d.play()
       except Exception as e:
          print('Device is unable to play media.')
@@ -704,5 +730,5 @@ if __name__ == '__main__':
    elif action == 'media-info':
       d.media_info()
 
-   if proxy and not py3:
+   if proxy:
       t.join()
