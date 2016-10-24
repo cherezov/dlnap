@@ -87,7 +87,7 @@ Receiver rx577 @ 192.168.1.40
 Samsung TV @ 192.168.1.35
 ```
 
-**Generic way**
+**Generic way**  
 **Note:** Requires a tool to convert url to direct link to video or stream
 ```
 > dlnap.py --device tv --proxy --play `any_conversion_tool https://www.youtube.com/watch?v=q0eWOaLxlso`
