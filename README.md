@@ -81,13 +81,15 @@ Receiver rx577 @ 192.168.1.40
 ```
 
 ### Send YouTube videos to smart TV (in progress)
+**Note:** requires [youtube-dl](https://github.com/rg3/youtube-dl) installed
 ```
 > dlnap.py --device tv --play https://www.youtube.com/watch?v=q0eWOaLxlso
 Samsung TV @ 192.168.1.35
 ```
 
-**generic way**
+**Generic way**
+**Note:** Requires a tool to convert url to direct link to video or stream
 ```
-> dlnap.py --device tv --proxy --play `youtube-dl -g https://www.youtube.com/watch?v=q0eWOaLxlso`
+> dlnap.py --device tv --proxy --play `any_conversion_tool https://www.youtube.com/watch?v=q0eWOaLxlso`
 Samsung TV @ 192.168.1.35
 ```
