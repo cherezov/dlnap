@@ -1,4 +1,5 @@
 # dlnap
+**Development in progress..**
 Enjoy your favorite music on your favorite sound system over your local network or send YouTube video to your smart TV.
 Simple network player for DLNA/UPnP devices allows you discover devices and playback your favorite media on them.
 
