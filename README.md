@@ -9,7 +9,7 @@ Simple network player for DLNA/UPnP devices allows you discover devices and play
 - [ ] Stop/Pause playback
 - [ ] Set next media
 - [ ] Integrate local http server to allow playback local files
-- [ ] Investigate if it possible to play images/video's on DLNA/UPnP powered TV
+- [x] Investigate if it possible to play images/video's on DLNA/UPnP powered TV (possible via [local download proxy](https://github.com/cherezov/red)
  
 ## Supported devices
  * Yamaha RX577
