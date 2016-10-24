@@ -5,17 +5,18 @@
 # @brief Python over the network media player to playback on DLNA UPnP devices.
 
 # Change log:
-#   0.1 initial version.
-#   0.2 device renamed to DlnapDevice; DLNAPlayer is disappeared.
-#   0.3 debug output is added. Extract location url fixed.
-#   0.4 compatible discover mode added.
-#   0.5 xml parser introduced for device descriptions
-#   0.6 xpath introduced to navigate over xml dictionary
-#   0.7 device ip argument introduced
-#   0.8 debug output is replaced with standard logging
-#   0.9 pause/stop added. Video playback tested on Samsung TV
+#   0.1  initial version.
+#   0.2  device renamed to DlnapDevice; DLNAPlayer is disappeared.
+#   0.3  debug output is added. Extract location url fixed.
+#   0.4  compatible discover mode added.
+#   0.5  xml parser introduced for device descriptions
+#   0.6  xpath introduced to navigate over xml dictionary
+#   0.7  device ip argument introduced
+#   0.8  debug output is replaced with standard logging
+#   0.9  pause/stop added. Video playback tested on Samsung TV
+#   0.10 proxy (draft) is introduced.
 
-__version__ = "0.9"
+__version__ = "0.10"
 
 import re
 import sys
@@ -26,8 +27,12 @@ import logging
 import traceback
 from contextlib import contextmanager
 
-import os
+import shutil
+import urllib2
+import BaseHTTPServer
+import threading
 
+import os
 py3 = sys.version_info[0] == 3
 if py3:
    from urllib.request import urlopen
@@ -38,15 +43,9 @@ SSDP_GROUP = ("239.255.255.250", 1900)
 URN_AVTransport = "urn:schemas-upnp-org:service:AVTransport:1"
 SSDP_ALL = "ssdp:all"
 
-def _get_port(location):
-   """ Extract port number from url.
-
-   location -- string like http://anyurl:port/whatever/path
-   return -- port number
-   """
-   port = re.findall('http://.*?:(\d+).*', location)
-   return int(port[0]) if port else 80
-
+# =================================================================================================
+# XML to DICT
+#
 def _get_tag_value(x, i = 0):
    """ Get the nearest to 'i' position xml tag name.
 
@@ -198,6 +197,82 @@ def _xpath(d, path):
       else:
          d = d[tag][0]
    return d
+#
+# XML to DICT
+# =================================================================================================
+# PROXY
+#
+running = False
+class DownloadProxy(BaseHTTPServer.BaseHTTPRequestHandler):
+   def response_success(self):
+      url = self.path[1:] # replace '/'
+      f = urllib2.urlopen(url=url)
+      content_type = f.info().getheaders("Content-Type")[0]
+
+      self.send_response(200, "ok")
+      self.send_header('Access-Control-Allow-Origin', '*')
+      self.send_header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+      self.send_header("Access-Control-Allow-Headers", "X-Requested-With")
+      self.send_header("Access-Control-Allow-Headers", "Content-Type")
+      self.send_header("Content-Type", content_type)
+      self.end_headers()
+
+   def do_OPTIONS(self):
+      self.response_success()
+
+   def do_HEAD(self):
+      self.response_success()
+
+   def do_GET(self):
+      global running
+      print('do_GET begin.')
+      url = self.path[1:] # replace '/'
+
+      if not url or not url.startswith('http'):
+         self.response_success()
+         return
+
+      f = urllib2.urlopen(url=url)
+      try:
+         size = f.info().getheaders("Content-Length")[0]
+         content_type = f.info().getheaders("Content-Type")[0]
+
+         self.send_response(200)
+         self.send_header('Access-Control-Allow-Origin', '*')
+         self.send_header("Content-Type", content_type)
+         self.send_header("Content-Disposition", 'attachment; filename="{}"'.format(os.path.basename(url)))
+         self.send_header("Content-Length", str(size))
+         self.end_headers()
+         shutil.copyfileobj(f, self.wfile)
+      finally:
+         running = False
+         f.close()
+      print('do_GET ends.')
+
+def runProxy(ip = '192.168.1.49', port = 8000):
+   global running
+   running = True
+   print('runProxy')
+   DownloadProxy.protocol_version = "HTTP/1.0"
+   httpd = BaseHTTPServer.HTTPServer((ip, port), DownloadProxy)
+   while running:
+      print('handle_request')
+      httpd.handle_request()
+   print('runProxy end')
+
+#
+# PROXY
+# =================================================================================================
+
+def _get_port(location):
+   """ Extract port number from url.
+
+   location -- string like http://anyurl:port/whatever/path
+   return -- port number
+   """
+   port = re.findall('http://.*?:(\d+).*', location)
+   return int(port[0]) if port else 80
+
 
 def _get_control_url(xml, urn = URN_AVTransport):
    """ Extract AVTransport contol url from device description xml
@@ -227,6 +302,7 @@ def _send_tcp(to, payload):
    """
    try:
       sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+      sock.settimeout(5)
       sock.connect(to)
       sock.sendall(payload.encode())
 
@@ -508,7 +584,7 @@ if __name__ == '__main__':
       print(__version__)
 
    try:
-      opts, args = getopt.getopt(sys.argv[1:], "hvd:t:i:", ['help', 'version', 'log=', 'ip=', 'play=', 'pause', 'stop', 'list', 'device=', 'timeout=', 'all', 'info', 'media-info'])
+      opts, args = getopt.getopt(sys.argv[1:], "hvd:t:i:", ['help', 'version', 'log=', 'ip=', 'play=', 'pause', 'stop', 'list', 'device=', 'timeout=', 'all', 'info', 'media-info', 'proxy'])
    except getopt.GetoptError:
       usage()
       sys.exit(1)
@@ -520,6 +596,7 @@ if __name__ == '__main__':
    logLevel = logging.WARN
    compatibleOnly = True
    ip = ''
+   proxy = False
    for opt, arg in opts:
       if opt in ('-h', '--help'):
          usage()
@@ -557,6 +634,8 @@ if __name__ == '__main__':
          action = 'info'
       elif opt in ('--media-info'):
          action = 'media-info'
+      elif opt in ('--proxy'):
+         proxy = True
 
    logging.basicConfig(level=logLevel)
 
@@ -574,6 +653,11 @@ if __name__ == '__main__':
 
    d = allDevices[0]
    print(d)
+   if proxy:
+      t = threading.Thread(target=runProxy)
+      t.daemon = True
+      t.start()
+
    if action == 'play':
       try:
          if url:
@@ -592,3 +676,6 @@ if __name__ == '__main__':
       d.info()
    elif action == 'media-info':
       d.media_info()
+
+   if proxy:
+      t.join()
