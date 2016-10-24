@@ -6,9 +6,9 @@ Simple network player for DLNA/UPnP devices allows you discover devices and play
  * Nothing but python (whatever you like: python 2.7+ or python3)
  
 ## TODO
-- [ ] Stop/Pause playback
 - [ ] Set next media
-- [ ] Integrate local http server to allow playback local files
+- [ ] Integrate [local download proxy](https://github.com/cherezov/red)
+- [x] Stop/Pause playback
 - [x] Investigate if it possible to play images/video's on DLNA/UPnP powered TV (possible via [local download proxy](https://github.com/cherezov/red))
  
 ## Supported devices
