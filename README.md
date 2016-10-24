@@ -4,6 +4,7 @@ Simple network player for DLNA/UPnP devices allows you discover devices and play
 
 ## Requires
  * Nothing but python (whatever you like: python 2.7+ or python3)
+ * [youtube-dl](https://github.com/rg3/youtube-dl) to playback YouTube links
  
 ## TODO
 - [ ] Set next media
