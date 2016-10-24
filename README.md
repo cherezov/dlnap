@@ -3,7 +3,7 @@ Enjoy your favorite music on your favorite sound system over your local network.
 Simple network player for DLNA/UPnP devices allows you discover devices and playback your favorite media on them.
 
 ## Requires
- * Nothing but python (whatever you like: python 2.7+ or python3)
+ * Python (whatever you like: python 2.7+ or python3)
  * [youtube-dl](https://github.com/rg3/youtube-dl) to playback YouTube links
  
 ## TODO
