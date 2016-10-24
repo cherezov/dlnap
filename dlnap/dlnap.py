@@ -27,17 +27,19 @@ import logging
 import traceback
 from contextlib import contextmanager
 
-import shutil
-import urllib2
-import BaseHTTPServer
-import threading
-
 import os
 py3 = sys.version_info[0] == 3
 if py3:
    from urllib.request import urlopen
 else:
    from urllib2 import urlopen
+
+if not py3:
+   import shutil
+   import urllib2
+   import BaseHTTPServer
+   import threading
+
 
 SSDP_GROUP = ("239.255.255.250", 1900)
 URN_AVTransport = "urn:schemas-upnp-org:service:AVTransport:1"
@@ -202,63 +204,64 @@ def _xpath(d, path):
 # =================================================================================================
 # PROXY
 #
-running = False
-class DownloadProxy(BaseHTTPServer.BaseHTTPRequestHandler):
-   def response_success(self):
-      url = self.path[1:] # replace '/'
-      f = urllib2.urlopen(url=url)
-      content_type = f.info().getheaders("Content-Type")[0]
-
-      self.send_response(200, "ok")
-      self.send_header('Access-Control-Allow-Origin', '*')
-      self.send_header('Access-Control-Allow-Methods', 'GET, OPTIONS')
-      self.send_header("Access-Control-Allow-Headers", "X-Requested-With")
-      self.send_header("Access-Control-Allow-Headers", "Content-Type")
-      self.send_header("Content-Type", content_type)
-      self.end_headers()
-
-   def do_OPTIONS(self):
-      self.response_success()
-
-   def do_HEAD(self):
-      self.response_success()
-
-   def do_GET(self):
-      global running
-      print('do_GET begin.')
-      url = self.path[1:] # replace '/'
-
-      if not url or not url.startswith('http'):
-         self.response_success()
-         return
-
-      f = urllib2.urlopen(url=url)
-      try:
-         size = f.info().getheaders("Content-Length")[0]
+if not py3:
+   running = False
+   class DownloadProxy(BaseHTTPServer.BaseHTTPRequestHandler):
+      def response_success(self):
+         url = self.path[1:] # replace '/'
+         f = urllib2.urlopen(url=url)
          content_type = f.info().getheaders("Content-Type")[0]
 
-         self.send_response(200)
+         self.send_response(200, "ok")
          self.send_header('Access-Control-Allow-Origin', '*')
+         self.send_header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+         self.send_header("Access-Control-Allow-Headers", "X-Requested-With")
+         self.send_header("Access-Control-Allow-Headers", "Content-Type")
          self.send_header("Content-Type", content_type)
-         self.send_header("Content-Disposition", 'attachment; filename="{}"'.format(os.path.basename(url)))
-         self.send_header("Content-Length", str(size))
          self.end_headers()
-         shutil.copyfileobj(f, self.wfile)
-      finally:
-         running = False
-         f.close()
-      print('do_GET ends.')
 
-def runProxy(ip = '192.168.1.49', port = 8000):
-   global running
-   running = True
-   print('runProxy')
-   DownloadProxy.protocol_version = "HTTP/1.0"
-   httpd = BaseHTTPServer.HTTPServer((ip, port), DownloadProxy)
-   while running:
-      print('handle_request')
-      httpd.handle_request()
-   print('runProxy end')
+      def do_OPTIONS(self):
+         self.response_success()
+
+      def do_HEAD(self):
+         self.response_success()
+
+      def do_GET(self):
+         global running
+         print('do_GET begin.')
+         url = self.path[1:] # replace '/'
+
+         if not url or not url.startswith('http'):
+            self.response_success()
+            return
+
+         f = urllib2.urlopen(url=url)
+         try:
+            size = f.info().getheaders("Content-Length")[0]
+            content_type = f.info().getheaders("Content-Type")[0]
+
+            self.send_response(200)
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.send_header("Content-Type", content_type)
+            self.send_header("Content-Disposition", 'attachment; filename="{}"'.format(os.path.basename(url)))
+            self.send_header("Content-Length", str(size))
+            self.end_headers()
+            shutil.copyfileobj(f, self.wfile)
+         finally:
+            running = False
+            f.close()
+         print('do_GET ends.')
+
+   def runProxy(ip = '192.168.1.49', port = 8000):
+      global running
+      running = True
+      print('runProxy')
+      DownloadProxy.protocol_version = "HTTP/1.0"
+      httpd = BaseHTTPServer.HTTPServer((ip, port), DownloadProxy)
+      while running:
+         print('handle_request')
+         httpd.handle_request()
+      print('runProxy end')
 
 #
 # PROXY
@@ -584,7 +587,31 @@ if __name__ == '__main__':
       print(__version__)
 
    try:
-      opts, args = getopt.getopt(sys.argv[1:], "hvd:t:i:", ['help', 'version', 'log=', 'ip=', 'play=', 'pause', 'stop', 'list', 'device=', 'timeout=', 'all', 'info', 'media-info', 'proxy'])
+      opts, args = getopt.getopt(sys.argv[1:], "hvd:t:i:", [   # information arguments
+                                                               'help',
+                                                               'version',
+                                                               'log=',
+
+                                                               # device arguments
+                                                               'device=',
+                                                               'ip=',
+
+                                                               # action arguments
+                                                               'play=',
+                                                               'pause',
+                                                               'stop',
+
+                                                               # discover arguments
+                                                               'list',
+                                                               'all',
+                                                               'timeout=',
+
+                                                               # transport info
+                                                               'info',
+                                                               'media-info',
+
+                                                               # download proxy
+                                                               'proxy'])
    except getopt.GetoptError:
       usage()
       sys.exit(1)
@@ -653,7 +680,7 @@ if __name__ == '__main__':
 
    d = allDevices[0]
    print(d)
-   if proxy:
+   if proxy and not py3:
       t = threading.Thread(target=runProxy)
       t.daemon = True
       t.start()
@@ -677,5 +704,5 @@ if __name__ == '__main__':
    elif action == 'media-info':
       d.media_info()
 
-   if proxy:
+   if proxy and not py3:
       t.join()
