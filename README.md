@@ -1,6 +1,6 @@
 # dlnap
-Enjoy your favorite music on your favorite sound system over your local network or send YouTube video to your smart TV.
-Simple network player for DLNA/UPnP devices allows you discover devices and playback your favorite media on them.
+Enjoy music on your favorite sound system or share a picture or YouTube video with your folks and friends on smart TV.
+Simple network player for DLNA/UPnP devices allows you discover devices and playback media on them. 
 
 ## Requires
  * Python (whatever you like: python 2.7+ or python3)
