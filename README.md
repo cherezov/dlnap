@@ -23,15 +23,15 @@ Simple network player for DLNA/UPnP devices allows you discover devices and play
 ### Overview
 ```
 dlnap.py [--ip <device ip>] [-d[evice] <name>] [--play <url>] [--pause] [--stop] [--list] [--all] [--proxy]
-```
-```--ip <device ip>```  ip address for faster access to the known device  
+```  
+```--ip <device ip>``` ip address for faster access to the known device  
 ```--device <device name or part of the name>``` discover devices with this name as substring  
 ```--all``` flag to discover all upnp devices, not only devices with AVTransport ability  
 ```--play <url>``` set current url for play and start playback it. In case of empty url - continue playing recent media  
 ```--pause``` pause current playback  
 ```--stop``` stop current playback  
-```--proxy``` use sync local download proxy, default is ip of current machine
-```--proxy-port``` port for local download proxy, default is 8000
+```--proxy``` use sync local download proxy, default is ip of current machine  
+```--proxy-port``` port for local download proxy, default is 8000  
 ```--timeout <seconds>``` discover timeout  
 
 ### Discover UPnP devices
@@ -82,14 +82,14 @@ Samsung TV @ 192.168.1.35
 
 ### Proxy
 Some devices are not able to play ```https``` links or links pointed outside of the local network.  
-For such cases ```dlnap``` tool allows to redirect such links to local download proxy.  
+For such cases ```dlnap.py``` tool allows to redirect such links to local download proxy.  
 
 __Example:__  
 The following command will tell TV device to go to the internet and download ```video.mp4```:  
 ```
 > dlnap.py --device tv --play http://somewhere.com/video.mp4
 ```
-my TV can't do that due to somewhere.com is outside of TV's network.  
+my TV can't do that due to ```somewhere.com``` is outside of TV's network.  
 But the following commands works perfectly:  
 ```
 > dlnap.py --device tv --play http://somewhere.com/video.mp4 --proxy
@@ -103,7 +103,7 @@ In order words the command looks like:
 ### Looking deeper :cat:
 **YouTube/Vimeo/etc videos**  
 In general device can playback direct links to a video file or a stream url only.  
-There is a tools to convert (YouTube) url to stream url, e.g [youtube-dl tool](https://github.com/rg3/youtube-dl).  
+There are tools to convert (YouTube) url to stream url, e.g [youtube-dl tool](https://github.com/rg3/youtube-dl).  
 Assuming you have a download proxy up and running at ```http://<proxy ip>:8000``` you can play a video now using command:  
 ```
 > dlnap.py --device tv --play http://<proxy ip>:8000/`youtube-dl -g https://www.youtube.com/watch?v=q0eWOaLxlso`
