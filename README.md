@@ -9,6 +9,7 @@ Simple network player for DLNA/UPnP devices allows you discover devices and play
  
 ## TODO
 - [ ] Set next media
+- [ ] Add support to play media from local machine, e.g --play /home/username/media/music.mp3
 - [x] Integrate [local download proxy](https://github.com/cherezov/red)
 - [x] Stop/Pause playback
 - [x] Investigate if it possible to play images/video's on DLNA/UPnP powered TV (possible via [local download proxy](https://github.com/cherezov/red))
@@ -57,49 +58,54 @@ where
 
 
 ### Playback media
-**By ip address**
+**Playback music**
 ```
-dlnap.py --ip 192.168.1.40 --play 'http://somewhere.com/my_favorite_music.mp3'
+> dlnap.py --ip 192.168.1.40 --play http://somewhere.com/music.mp3
 Receiver rx577 @ 192.168.1.40
-
-dlnap.py --ip 192.168.1.40 --pause 'http://somewhere.com/my_favorite_music.mp3'
-Receiver rx577 @ 192.168.1.40
-
-dlnap.py --ip 192.168.1.40 --play ''
-Receiver rx577 @ 192.168.1.40
+```  
+**Playback video**
 ```
-
-**By device name**
+> dlnap.py --device tv --play http://somewhere.com/video.mp4
+Samsung TV @ 192.168.1.35
 ```
-dlnap.py --device rx577 --play 'http://somewhere.com/my_favorite_music.mp3'
-Receiver rx577 @ 192.168.1.40
+**Show image**
 ```
-Note: a part of the device name is quite enough: *rx577* instead of *Receiver rx577*
-
-**Any compatible device**
+> dlnap.py --device tv --play http://somewhere.com/image.jpg
+Samsung TV @ 192.168.1.35
 ```
-dlnap.py --play 'http://somewhere.com/my_favorite_music.mp3'
-Receiver rx577 @ 192.168.1.40
-```
-### Proxy
-TODO: add some words about proxy here
-
-### Send YouTube videos to smart TV
-**Note:** requires [youtube-dl](https://github.com/rg3/youtube-dl) installed
+**YouTube links**
 ```
 > dlnap.py --device tv --play https://www.youtube.com/watch?v=q0eWOaLxlso
 Samsung TV @ 192.168.1.35
 ```
+**Note:** requires [youtube-dl](https://github.com/rg3/youtube-dl) installed
 
-**Generic way**  
-**Note:** Requires a tool to convert url to direct link to video or stream
+### Proxy
+Some devices are not able to play ```https``` links or links pointed outside of the local network.  
+For such cases ```dlnap``` tool allows to redirect such links to local download proxy.  
+
+__Example:__  
+The following command will tell TV device to go to the internet and download ```video.mp4```:  
 ```
-> dlnap.py --device tv --proxy --play `any_conversion_tool https://www.youtube.com/watch?v=q0eWOaLxlso`
-Samsung TV @ 192.168.1.35
+> dlnap.py --device tv --play http://somewhere.com/video.mp4
+```
+my TV can't do that due to somewhere.com is outside of TV's network.  
+But the following commands works perfectly:  
+```
+> dlnap.py --device tv --play http://somewhere.com/video.mp4 --proxy
+```
+because ```dlnap.py``` sets up a local http server at ```http://<your ip>:8000``` and tells TV to download file ```http://somewhere.com/video.mp4``` from this http server.  
+In order words the command looks like:  
+```
+> dlnap.py --device tv --play 'http://<your ip>:8000/http://somewhere.com/video.mp4'
 ```
 
-### Send images to smart TV
+### Looking deeper :cat:
+**YouTube/Vimeo/etc videos**  
+In general device can playback direct links to a video file or a stream url only.  
+There is a tools to convert (YouTube) url to stream url, e.g [youtube-dl tool](https://github.com/rg3/youtube-dl).  
+Assuming you have a download proxy up and running at ```http://<proxy ip>:8000``` you can play a video now using command:  
 ```
-> dlnap.py --device tv --play http://www.somewhere.com/image.jpg
+> dlnap.py --device tv --play http://<proxy ip>:8000/`youtube-dl -g https://www.youtube.com/watch?v=q0eWOaLxlso`
 Samsung TV @ 192.168.1.35
 ```
