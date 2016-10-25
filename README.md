@@ -1,5 +1,5 @@
 # dlnap
-**Development in progress..**  
+**Development is still in progress..**  
 Enjoy your favorite music on your favorite sound system over your local network or send YouTube video to your smart TV.
 Simple network player for DLNA/UPnP devices allows you discover devices and playback your favorite media on them.
 
@@ -9,7 +9,7 @@ Simple network player for DLNA/UPnP devices allows you discover devices and play
  
 ## TODO
 - [ ] Set next media
-- [ ] Integrate [local download proxy](https://github.com/cherezov/red)
+- [x] Integrate [local download proxy](https://github.com/cherezov/red)
 - [x] Stop/Pause playback
 - [x] Investigate if it possible to play images/video's on DLNA/UPnP powered TV (possible via [local download proxy](https://github.com/cherezov/red))
  
@@ -21,7 +21,7 @@ Simple network player for DLNA/UPnP devices allows you discover devices and play
 ## Usage
 ### Overview
 ```
-dlnap.py [--ip <device ip>] [-d[evice] <name>] [--play <url>] [--pause] [--stop] [--list] [--all] 
+dlnap.py [--ip <device ip>] [-d[evice] <name>] [--play <url>] [--pause] [--stop] [--list] [--all] [--proxy]
 ```
 ```--ip <device ip>```  ip address for faster access to the known device  
 ```--device <device name or part of the name>``` discover devices with this name as substring  
@@ -29,6 +29,8 @@ dlnap.py [--ip <device ip>] [-d[evice] <name>] [--play <url>] [--pause] [--stop]
 ```--play <url>``` set current url for play and start playback it. In case of empty url - continue playing recent media  
 ```--pause``` pause current playback  
 ```--stop``` stop current playback  
+```--proxy``` use sync local download proxy, default is ip of current machine
+```--proxy-port``` port for local download proxy, default is 8000
 ```--timeout <seconds>``` discover timeout  
 
 ### Discover UPnP devices
@@ -79,8 +81,10 @@ Note: a part of the device name is quite enough: *rx577* instead of *Receiver rx
 dlnap.py --play 'http://somewhere.com/my_favorite_music.mp3'
 Receiver rx577 @ 192.168.1.40
 ```
+### Proxy
+TODO: add some words about proxy here
 
-### Send YouTube videos to smart TV (in progress)
+### Send YouTube videos to smart TV
 **Note:** requires [youtube-dl](https://github.com/rg3/youtube-dl) installed
 ```
 > dlnap.py --device tv --play https://www.youtube.com/watch?v=q0eWOaLxlso
@@ -94,7 +98,7 @@ Samsung TV @ 192.168.1.35
 Samsung TV @ 192.168.1.35
 ```
 
-### Send images to smart TV (in progress)
+### Send images to smart TV
 ```
 > dlnap.py --device tv --play http://www.somewhere.com/image.jpg
 Samsung TV @ 192.168.1.35
