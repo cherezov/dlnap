@@ -9,9 +9,10 @@ Simple network player for DLNA/UPnP devices allows you discover devices and play
 ## TODO
 - [ ] Set next media
 - [ ] Add support to play media from local machine, e.g --play /home/username/media/music.mp3
+- [ ] Try it on Windows
 - [x] Integrate [local download proxy](https://github.com/cherezov/red)
 - [x] Stop/Pause playback
-- [x] Investigate if it possible to play images/video's on DLNA/UPnP powered TV (possible via [local download proxy](https://github.com/cherezov/red))
+- [x] Investigate if it possible to play images/video's on DLNA/UPnP powered TV (possible via [download proxy](https://github.com/cherezov/dlnap#proxy))
  
 ## Supported devices
  * Yamaha RX577
@@ -89,11 +90,11 @@ The following command will set up a local http server at ```http://<your ip>:800
 > dlnap.py --device tv --play http://somewhere.com/video.mp4 --proxy
 ```
 
-So behind the scene he command looks like:  
+So behind the scene the command looks like:  
 ```
 > dlnap.py --device tv --play 'http://<your ip>:8000/http://somewhere.com/video.mp4'
 ```
-**Note:** using proxy is syncronous command. The ```dlnap.py``` will not exit until device downloading the file to playback.
+**Note:** proxy is syncronous which means that ```dlnap.py``` will not exit until device downloading the file to playback.
 
 ### Going deeper :cat:
 **YouTube/Vimeo/etc videos**  
