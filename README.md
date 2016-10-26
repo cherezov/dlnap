@@ -10,6 +10,7 @@ Simple network player for DLNA/UPnP devices allows you discover devices and play
 - [ ] Set next media
 - [ ] Add support to play media from local machine, e.g --play /home/username/media/music.mp3
 - [ ] Try it on Windows
+- [ ] Add AVTransport:2 suppoft
 - [x] Integrate [local download proxy](https://github.com/cherezov/red)
 - [x] Stop/Pause playback
 - [x] Investigate if it possible to play images/video's on DLNA/UPnP powered TV (possible via [download proxy](https://github.com/cherezov/dlnap#proxy))
@@ -96,7 +97,7 @@ So behind the scene the command looks like:
 ```
 **Note:** proxy is syncronous which means that ```dlnap.py``` will not exit until device downloading the file to playback.
 
-### Going deeper :cat:
+### We need to go deeper : :octocat:
 **YouTube/Vimeo/etc videos**  
 In general device can playback direct links to a video file or a stream url only.  
 There are tools to convert (YouTube) url to stream url, e.g [youtube-dl tool](https://github.com/rg3/youtube-dl).  
