@@ -16,8 +16,9 @@
 #   0.9  pause/stop added. Video playback tested on Samsung TV
 #   0.10 proxy (draft) is introduced.
 #   0.11 sync proxy for py2 and py3 implemented, --proxy-port added
+#   0.12 local files can be played as well now via proxy
 
-__version__ = "0.11"
+__version__ = "0.12"
 
 import re
 import sys
@@ -26,6 +27,7 @@ import socket
 import select
 import logging
 import traceback
+import mimetypes
 from contextlib import contextmanager
 
 import os
@@ -217,11 +219,17 @@ class DownloadProxy(BaseHTTPRequestHandler):
 
    def response_success(self):
       url = self.path[1:] # replace '/'
-      f = urlopen(url=url)
-      if py3:
-         content_type = f.getheader("Content-Type")
+
+      if os.path.exists(url):
+         f = open(url)
+         content_type = mimetypes.guess_type(url)[0]
       else:
-         content_type = f.info().getheaders("Content-Type")[0]
+         f = urlopen(url=url)
+
+         if py3:
+            content_type = f.getheader("Content-Type")
+         else:
+            content_type = f.info().getheaders("Content-Type")[0]
 
       self.send_response(200, "ok")
       self.send_header('Access-Control-Allow-Origin', '*')
@@ -241,18 +249,25 @@ class DownloadProxy(BaseHTTPRequestHandler):
       global running
       url = self.path[1:] # replace '/'
 
-      if not url or not url.startswith('http'):
+      content_type = ''
+      if os.path.exists(url):
+         f = open(url)
+         content_type = mimetypes.guess_type(url)[0]
+         size = os.path.getsize(url)
+      elif not url or not url.startswith('http'):
          self.response_success()
          return
+      else:
+         f = urlopen(url=url)
 
-      f = urlopen(url=url)
       try:
-         if py3:
-            content_type = f.getheader("Content-Type")
-            size = f.getheader("Content-Length")
-         else:
-            content_type = f.info().getheaders("Content-Type")[0]
-            size = f.info().getheaders("Content-Length")[0]
+         if not content_type:
+            if py3:
+               content_type = f.getheader("Content-Type")
+               size = f.getheader("Content-Length")
+            else:
+               content_type = f.info().getheaders("Content-Type")[0]
+               size = f.info().getheaders("Content-Length")[0]
 
          self.send_response(200)
          self.send_header('Access-Control-Allow-Origin', '*')
@@ -317,11 +332,11 @@ def _send_tcp(to, payload):
       sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
       sock.settimeout(5)
       sock.connect(to)
-      sock.sendall(payload.encode())
+      sock.sendall(payload.encode('utf-8'))
 
       data = sock.recv(2048)
       if py3:
-         data = data.decode()
+         data = data.decode('utf-8')
       data = _xml2dict(data.replace('&lt;', '<').replace('&gt;', '>').replace('&quot;', '"'), True)
       errorDescription = _xpath(data, 's:Envelope/s:Body/s:Fault/detail/UPnPError/errorDescription')
       if errorDescription is not None:
