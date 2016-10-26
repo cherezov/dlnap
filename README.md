@@ -97,7 +97,7 @@ So behind the scene the command looks like:
 ```
 **Note:** proxy is syncronous which means that ```dlnap.py``` will not exit until device downloading the file to playback.
 
-### We need to go deeper : :octocat:
+### We need to go deeper :octocat:
 **YouTube/Vimeo/etc videos**  
 In general device can playback direct links to a video file or a stream url only.  
 There are tools to convert (YouTube) url to stream url, e.g [youtube-dl tool](https://github.com/rg3/youtube-dl).  
