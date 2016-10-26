@@ -10,7 +10,7 @@ Simple network player for DLNA/UPnP devices allows you discover devices and play
 - [ ] Set next media
 - [ ] Add support to play media from local machine, e.g --play /home/username/media/music.mp3
 - [ ] Try it on Windows
-- [ ] Add AVTransport:2 suppoft
+- [ ] Add AVTransport:2 and further support
 - [x] Integrate [local download proxy](https://github.com/cherezov/red)
 - [x] Stop/Pause playback
 - [x] Investigate if it possible to play images/video's on DLNA/UPnP powered TV (possible via [download proxy](https://github.com/cherezov/dlnap#proxy))
