@@ -8,7 +8,7 @@ Simple network player for DLNA/UPnP devices allows you discover devices and play
  
 ## TODO
 - [ ] Set next media
-- [ ] Add support to play media from local machine, e.g --play /home/username/media/music.mp3
+- [ ] Add support to play media from local machine, e.g --play /home/username/media/music.mp3 for py3
 - [ ] Try it on Windows
 - [ ] Add AVTransport:2 and further support
 - [x] Integrate [local download proxy](https://github.com/cherezov/red)
@@ -74,6 +74,12 @@ Samsung TV @ 192.168.1.35
 > dlnap.py --device tv --play http://somewhere.com/image.jpg
 Samsung TV @ 192.168.1.35
 ```
+**Local files**
+```
+> dlnap.py --device tv --play ~/media/video.mp4 --proxy
+Samsung TV @ 192.168.1.35
+```
+
 **YouTube links**
 ```
 > dlnap.py --device tv --play https://www.youtube.com/watch?v=q0eWOaLxlso
