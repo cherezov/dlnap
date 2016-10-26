@@ -15,7 +15,7 @@ Simple network player for DLNA/UPnP devices allows you discover devices and play
  
 ## Supported devices
  * Yamaha RX577
- * Samsung Smart TV (UE40ES5507) via [proxy](https://github.com/cherezov/red)
+ * Samsung Smart TV (UE40ES5507) via [proxy](https://github.com/cherezov/dlnap#proxy)
  * _please email me if it works or doesn't work with your device_
  
 ## Usage
@@ -42,7 +42,7 @@ Discovered devices:
  [a] Samsung TV @ 192.168.1.35
 ```
 
-**List all UPnP devices**
+**List all available UPnP devices**
 ```
 > dlnap.py --all
 Discovered devices:
@@ -80,30 +80,26 @@ Samsung TV @ 192.168.1.35
 **Note:** requires [youtube-dl](https://github.com/rg3/youtube-dl) installed
 
 ### Proxy
-Some devices are not able to play ```https``` links or links pointed outside of the local network.  
-For such cases ```dlnap.py``` tool allows to redirect such links to local download proxy.  
+Some devices doesn not able to play ```https``` links or links pointed outside of the local network.  
+For such cases ```dlnap.py``` tool allows to redirect such links to embeded download proxy.  
 
 __Example:__  
-The following command will tell TV device to go to the internet and download ```video.mp4```:  
-```
-> dlnap.py --device tv --play http://somewhere.com/video.mp4
-```
-my TV can't do that due to ```somewhere.com``` is outside of TV's network.  
-But the following commands works perfectly:  
+The following command will set up a local http server at ```http://<your ip>:8000``` and tells TV to download file ```http://somewhere.com/video.mp4``` from this http server:  
 ```
 > dlnap.py --device tv --play http://somewhere.com/video.mp4 --proxy
 ```
-because ```dlnap.py``` sets up a local http server at ```http://<your ip>:8000``` and tells TV to download file ```http://somewhere.com/video.mp4``` from this http server.  
-In order words the command looks like:  
+
+So behind the scene he command looks like:  
 ```
 > dlnap.py --device tv --play 'http://<your ip>:8000/http://somewhere.com/video.mp4'
 ```
+**Note:** using proxy is syncronous command. The ```dlnap.py``` will not exit until device downloading the file to playback.
 
-### Looking deeper :cat:
+### Going deeper :cat:
 **YouTube/Vimeo/etc videos**  
 In general device can playback direct links to a video file or a stream url only.  
 There are tools to convert (YouTube) url to stream url, e.g [youtube-dl tool](https://github.com/rg3/youtube-dl).  
-Assuming you have a download proxy up and running at ```http://<proxy ip>:8000``` you can play a video now using command:  
+Assuming you have download proxy up and running at ```http://<proxy ip>:8000``` you can now play a video using command:  
 ```
 > dlnap.py --device tv --play http://<proxy ip>:8000/`youtube-dl -g https://www.youtube.com/watch?v=q0eWOaLxlso`
 Samsung TV @ 192.168.1.35
