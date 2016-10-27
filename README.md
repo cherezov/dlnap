@@ -101,7 +101,7 @@ So behind the scene the command looks like:
 ```
 > dlnap.py --device tv --play 'http://<your ip>:8000/http://somewhere.com/video.mp4'
 ```
-**Note:** proxy is syncronous which means that ```dlnap.py``` will not exit until device downloading the file to playback.
+**Note:** proxy is syncronous which means that ```dlnap.py``` will not exit while device downloading file to playback.
 
 ### We need to go deeper :octocat:
 **YouTube/Vimeo/etc videos**  
