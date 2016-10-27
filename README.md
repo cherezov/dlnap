@@ -30,7 +30,7 @@ Selectors:
 ```--ip <device ip>``` ip address for faster access to the known device  
 ```--device <device name or part of the name>``` discover devices with this name as substring  
 Commands:  
-```--list``` default command. Lists discovered UPnP devices in the network
+```--list``` default command. Lists discovered UPnP devices in the network  
 ```--play <url>``` set current url for play and start playback it. In case of empty url - continue playing recent media  
 ```--pause``` pause current playback  
 ```--stop``` stop current playback  
