@@ -24,14 +24,18 @@ Simple network player for DLNA/UPnP devices allows you discover devices and play
 ## Usage
 ### Overview
 ```
-dlnap.py [--ip <device ip>] [-d[evice] <name>] [--play <url>] [--pause] [--stop] [--list] [--all] [--proxy]
+dlnap.py [<selector>] [<command>] [<feature>]
 ```  
+Selectors:  
 ```--ip <device ip>``` ip address for faster access to the known device  
 ```--device <device name or part of the name>``` discover devices with this name as substring  
-```--all``` flag to discover all upnp devices, not only devices with AVTransport ability  
+Commands:  
+```--list``` default command. Lists discovered UPnP devices in the network
 ```--play <url>``` set current url for play and start playback it. In case of empty url - continue playing recent media  
 ```--pause``` pause current playback  
 ```--stop``` stop current playback  
+Features:  
+```--all``` flag to discover all upnp devices, not only devices with AVTransport ability  
 ```--proxy``` use sync local download proxy, default is ip of current machine  
 ```--proxy-port``` port for local download proxy, default is 8000  
 ```--timeout <seconds>``` discover timeout  
