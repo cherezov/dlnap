@@ -8,6 +8,7 @@ Simple network player for DLNA/UPnP devices allows you discover devices and play
  
 ## TODO
 - [ ] Set next media
+- [ ] Volume control
 - [ ] Add support to play media from local machine, e.g --play /home/username/media/music.mp3 for py3
 - [ ] Try it on Windows
 - [ ] Add AVTransport:2 and further support
