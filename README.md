@@ -12,6 +12,7 @@ Simple network player for DLNA/UPnP devices allows you discover devices and play
 - [ ] Add support to play media from local machine, e.g --play /home/username/media/music.mp3 for py3
 - [ ] Try it on Windows
 - [ ] Add AVTransport:2 and further support
+- [ ] Play on multiple devices
 - [x] Integrate [local download proxy](https://github.com/cherezov/red)
 - [x] Stop/Pause playback
 - [x] Investigate if it possible to play images/video's on DLNA/UPnP powered TV (possible via [download proxy](https://github.com/cherezov/dlnap#proxy))
@@ -26,15 +27,15 @@ Simple network player for DLNA/UPnP devices allows you discover devices and play
 ```
 dlnap.py [<selector>] [<command>] [<feature>]
 ```  
-Selectors:  
+__Selectors:__  
 ```--ip <device ip>``` ip address for faster access to the known device  
 ```--device <device name or part of the name>``` discover devices with this name as substring  
-Commands:  
+__Commands:__  
 ```--list``` default command. Lists discovered UPnP devices in the network  
 ```--play <url>``` set current url for play and start playback it. In case of empty url - continue playing recent media  
 ```--pause``` pause current playback  
 ```--stop``` stop current playback  
-Features:  
+__Features:__  
 ```--all``` flag to discover all upnp devices, not only devices with AVTransport ability  
 ```--proxy``` use sync local download proxy, default is ip of current machine  
 ```--proxy-port``` port for local download proxy, default is 8000  
