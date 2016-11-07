@@ -446,7 +446,7 @@ class DlnapDevice:
       urn = URN_AVTransport_Fmt.format(self.ssdp_version)
       payload = self._payload_from_template(action=action, data=data, urn=urn)
 
-      return "\r\n".join([
+      packet = "\r\n".join([
          'POST {} HTTP/1.1'.format(self.control_url),
          'User-Agent: {}/{}'.format(__file__, __version__),
          'Accept: */*',
@@ -458,6 +458,8 @@ class DlnapDevice:
          '',
          payload,
          ])
+      self.__logger.debug(packet)
+      return packet
 
    def set_current_media(self, url, instance_id = 0):
       """ Set media to playback.
@@ -465,7 +467,7 @@ class DlnapDevice:
       url -- media url
       instance_id -- device instance id
       """
-      packet = self._create_packet('SetAVTransportURI', {'InstanceID':instance_id, 'CurrentURI':url})
+      packet = self._create_packet('SetAVTransportURI', {'InstanceID':instance_id, 'CurrentURI':url, 'CurrentURIMetaData':'' })
       _send_tcp((self.ip, self.port), packet)
 
    def play(self, instance_id = 0):
@@ -473,7 +475,7 @@ class DlnapDevice:
 
       instance_id -- device instance id
       """
-      packet = self._create_packet('Play', {'InstanceID':instance_id, 'Speed':1})
+      packet = self._create_packet('Play', {'InstanceID': instance_id, 'Speed': 1})
       _send_tcp((self.ip, self.port), packet)
 
    def pause(self, instance_id = 0):
