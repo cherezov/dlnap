@@ -17,8 +17,11 @@
 #   0.10 proxy (draft) is introduced.
 #   0.11 sync proxy for py2 and py3 implemented, --proxy-port added
 #   0.12 local files can be played as well now via proxy
+#   0.13 ssdp protocol version argument added
+#
+#   1.0  moved from idea version
 
-__version__ = "0.12"
+__version__ = "0.13"
 
 import re
 import sys
@@ -44,9 +47,9 @@ else:
 import shutil
 import threading
 
-
 SSDP_GROUP = ("239.255.255.250", 1900)
 URN_AVTransport = "urn:schemas-upnp-org:service:AVTransport:1"
+URN_AVTransport_Fmt = "urn:schemas-upnp-org:service:AVTransport:{}"
 SSDP_ALL = "ssdp:all"
 
 # =================================================================================================
@@ -163,7 +166,7 @@ def _xml2dict(s, ignoreUntilXML = False):
    return d
 
 s = """
-   hello 
+   hello
    this is a bad
    strings
 
@@ -302,7 +305,7 @@ def _get_port(location):
    return int(port[0]) if port else 80
 
 
-def _get_control_url(xml, urn = URN_AVTransport):
+def _get_control_url(xml, urn):
    """ Extract AVTransport contol url from device description xml
 
    xml -- device description xml
@@ -311,16 +314,21 @@ def _get_control_url(xml, urn = URN_AVTransport):
    return _xpath(xml, 'root/device/serviceList/service@serviceType={}/controlURL'.format(urn))
 
 @contextmanager
-def _send_udp(to, payload):
+def _send_udp(to, packet):
    """ Send UDP message to group
 
-   to -- (host, port) group to send to payload to
-   payload -- message to send
+   to -- (host, port) group to send the packet to
+   packet -- message to send
    """
    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-   sock.sendto(payload.encode(), to)
+   sock.sendto(packet.encode(), to)
    yield sock
    sock.close()
+
+def _unescape_xml(xml):
+   """ Replace escaped xml symbols with real ones.
+   """
+   return xml.replace('&lt;', '<').replace('&gt;', '>').replace('&quot;', '"')
 
 def _send_tcp(to, payload):
    """ Send TCP message to group
@@ -337,7 +345,7 @@ def _send_tcp(to, payload):
       data = sock.recv(2048)
       if py3:
          data = data.decode('utf-8')
-      data = _xml2dict(data.replace('&lt;', '<').replace('&gt;', '>').replace('&quot;', '"'), True)
+      data = _xml2dict(_unescape_xml(data), True)
       errorDescription = _xpath(data, 's:Envelope/s:Body/s:Fault/detail/UPnPError/errorDescription')
       if errorDescription is not None:
          logging.error(errorDescription)
@@ -362,7 +370,8 @@ def _get_friendly_name(xml):
    xml -- device description xml
    return -- device name
    """
-   return _xpath(xml, 'root/device/friendlyName')
+   name = _xpath(xml, 'root/device/friendlyName')
+   return name if name is not None else 'Unknown'
 
 class DlnapDevice:
    """ Represents DLNA/UPnP device.
@@ -372,14 +381,16 @@ class DlnapDevice:
       self.__logger = logging.getLogger(self.__class__.__name__)
       self.__logger.info('=> New DlnapDevice (ip = {}) initialization..'.format(ip))
 
-      self.__raw = raw.decode()
       self.ip = ip
+      self.ssdp_version = 1
+
       self.port = None
-      self.control_url = None
       self.name = 'Unknown'
+      self.control_url = None
       self.has_av_transport = False
 
       try:
+         self.__raw = raw.decode()
          self.location = _get_location_url(self.__raw)
          self.__logger.info('location: {}'.format(self.location))
 
@@ -392,11 +403,9 @@ class DlnapDevice:
          self.__logger.debug('description xml: {}'.format(self.__desc_xml))
 
          self.name = _get_friendly_name(self.__desc_xml)
-         if self.name is None:
-            self.name = 'Unknown'
          self.__logger.info('friendlyName: {}'.format(self.name))
 
-         self.control_url = _get_control_url(self.__desc_xml)
+         self.control_url = _get_control_url(self.__desc_xml, URN_AVTransport)
          self.__logger.info('control_url: {}'.format(self.control_url))
 
          self.has_av_transport = self.control_url is not None
@@ -410,14 +419,35 @@ class DlnapDevice:
    def __eq__(self, d):
       return self.name == d.name and self.ip == d.ip
 
-   def _create_packet(self, action, payload, control_url, urn = URN_AVTransport):
+   def _payload_from_template(self, action, data, urn):
+      """
+      """
+      fields = ''
+      for tag, value in data.items():
+        fields += '<{tag}>{value}</{tag}>'.format(tag=tag, value=value)
+
+      payload = """<?xml version="1.0" encoding="utf-8"?>
+         <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+            <s:Body>
+               <u:{action} xmlns:u="{urn}">
+                  {fields}
+               </u:{action}>
+            </s:Body>
+         </s:Envelope>""".format(action=action, urn=urn, fields=fields)
+      return payload
+
+   def _create_packet(self, action, data):
       """ Create packet to send to device control url.
 
       action -- control action
-      payload -- xml to send to device
+      data -- dictionary with XML fields value
       """
-      header = "\r\n".join([
-         'POST {} HTTP/1.1'.format(control_url),
+
+      urn = URN_AVTransport_Fmt.format(self.ssdp_version)
+      payload = self._payload_from_template(action=action, data=data, urn=urn)
+
+      return "\r\n".join([
+         'POST {} HTTP/1.1'.format(self.control_url),
          'User-Agent: {}/{}'.format(__file__, __version__),
          'Accept: */*',
          'Content-Type: text/xml; charset="utf-8"',
@@ -429,44 +459,21 @@ class DlnapDevice:
          payload,
          ])
 
-      return header
-
-   def set_current(self, url, instance_id = 0):
+   def set_current_media(self, url, instance_id = 0):
       """ Set media to playback.
 
       url -- media url
       instance_id -- device instance id
       """
-      payload = """<?xml version="1.0" encoding="utf-8"?>
-         <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
-            <s:Body>
-               <u:SetAVTransportURI xmlns:u="{}">
-                  <InstanceID>{}</InstanceID>
-                  <CurrentURI>{}</CurrentURI>
-                  <CurrentURIMetaData />
-               </u:SetAVTransportURI>
-            </s:Body>
-         </s:Envelope>""".format(URN_AVTransport, instance_id, url)
-
-      packet = self._create_packet('SetAVTransportURI', payload, self.control_url)
+      packet = self._create_packet('SetAVTransportURI', {'InstanceID':instance_id, 'CurrentURI':url})
       _send_tcp((self.ip, self.port), packet)
 
-   def play(self, instance_id=0):
+   def play(self, instance_id = 0):
       """ Play media that was already set as current.
 
       instance_id -- device instance id
       """
-      payload = """<?xml version="1.0" encoding="utf-8"?>
-         <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
-            <s:Body>
-               <u:Play xmlns:u="{}">
-                  <InstanceID>{}</InstanceID>
-                  <Speed>1</Speed>
-               </u:Play>
-            </s:Body>
-         </s:Envelope>""".format(URN_AVTransport, instance_id)
-
-      packet = self._create_packet('Play', payload, self.control_url)
+      packet = self._create_packet('Play', {'InstanceID':instance_id, 'Speed':1})
       _send_tcp((self.ip, self.port), packet)
 
    def pause(self, instance_id = 0):
@@ -474,17 +481,7 @@ class DlnapDevice:
 
       instance_id -- device instance id
       """
-      payload = """<?xml version="1.0" encoding="utf-8"?>
-         <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
-            <s:Body>
-               <u:Pause xmlns:u="{}">
-                  <InstanceID>{}</InstanceID>
-                  <Speed>1</Speed>
-               </u:Pause>
-            </s:Body>
-         </s:Envelope>""".format(URN_AVTransport, instance_id)
-
-      packet = self._create_packet('Pause', payload, self.control_url)
+      packet = self._create_packet('Pause', {'InstanceID': instance_id, 'Speed':1})
       _send_tcp((self.ip, self.port), packet)
 
    def stop(self, instance_id = 0):
@@ -492,18 +489,24 @@ class DlnapDevice:
 
       instance_id -- device instance id
       """
-      payload = """<?xml version="1.0" encoding="utf-8"?>
-         <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
-            <s:Body>
-               <u:Stop xmlns:u="{}">
-                  <InstanceID>{}</InstanceID>
-                  <Speed>1</Speed>
-               </u:Stop>
-            </s:Body>
-         </s:Envelope>""".format(URN_AVTransport, instance_id)
-
-      packet = self._create_packet('Stop', payload, self.control_url)
+      packet = self._create_packet('Stop', {'InstanceID': instance_id, 'Speed': 1})
       _send_tcp((self.ip, self.port), packet)
+
+   def info(self, instance_id=0):
+      """ Transport info.
+
+      instance_id -- device instance id
+      """
+      packet = self._create_packet('GetTransportInfo', {'InstanceID': instance_id})
+      return _send_tcp((self.ip, self.port), packet)
+
+   def media_info(self, instance_id=0):
+      """ Media info.
+
+      instance_id -- device instance id
+      """
+      packet = self._create_packet('GetMediaInfo', {'InstanceID': instance_id})
+      return _send_tcp((self.ip, self.port), packet)
 
    def set_next(self, url):
       pass
@@ -511,43 +514,8 @@ class DlnapDevice:
    def next(self):
       pass
 
-   def info(self, instance_id=0):
-      """ Transport info.
 
-      instance_id -- device instance id
-      """
-      payload = """<?xml version="1.0" encoding="utf-8"?>
-         <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
-            <s:Body>
-               <u:GetTransportInfo xmlns:u="{}">
-                  <InstanceID>{}</InstanceID>
-               </u:GetTransportInfo>
-            </s:Body>
-         </s:Envelope>""".format(URN_AVTransport, instance_id)
-
-      packet = self._create_packet('GetTransportInfo', payload, self.control_url)
-      data = _send_tcp((self.ip, self.port), packet)
-      print(data)
-
-   def media_info(self, instance_id=0):
-      """ Transport info.
-
-      instance_id -- device instance id
-      """
-      payload = """<?xml version="1.0" encoding="utf-8"?>
-         <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
-            <s:Body>
-               <u:GetMediaInfo xmlns:u="{}">
-                  <InstanceID>{}</InstanceID>
-               </u:GetMediaInfo>
-            </s:Body>
-         </s:Envelope>""".format(URN_AVTransport, instance_id)
-
-      packet = self._create_packet('GetMediaInfo', payload, self.control_url)
-      data = _send_tcp((self.ip, self.port), packet)
-      print(data)
-
-def discover(name = '', ip = '', timeout = 1, st = SSDP_ALL, mx = 3):
+def discover(name = '', ip = '', timeout = 1, st = SSDP_ALL, mx = 3, ssdp_version = 1):
    """ Discover UPnP devices in the local network.
 
    name -- name or part of the name to filter devices
@@ -556,6 +524,7 @@ def discover(name = '', ip = '', timeout = 1, st = SSDP_ALL, mx = 3):
    mx -- mx field of discovery packet
    return -- list of DlnapDevice
    """
+   st = st.format(ssdp_version)
    payload = "\r\n".join([
               'M-SEARCH * HTTP/1.1',
               'User-Agent: {}/{}'.format(__file__, __version__),
@@ -580,6 +549,7 @@ def discover(name = '', ip = '', timeout = 1, st = SSDP_ALL, mx = 3):
                 continue
 
              d = DlnapDevice(data, addr[0])
+             d.ssdp_version = ssdp_version
              if d not in devices:
                 if not name or name is None or name.lower() in d.name.lower():
                    if not ip:
@@ -608,6 +578,7 @@ if __name__ == '__main__':
       print(' --pause - pause current playback')
       print(' --stop - stop current playback')
       print(' --timeout <seconds> - discover timeout')
+      print(' --ssdp-version <version> - discover devices by protocol version, default 1')
       print(' --proxy - use local proxy on proxy port')
       print(' --proxy-port <port number> - proxy port to listen incomming connections from devices, default 8000')
       print(' --help - this help')
@@ -634,6 +605,7 @@ if __name__ == '__main__':
                                                                'list',
                                                                'all',
                                                                'timeout=',
+                                                               'ssdp-version=',
 
                                                                # transport info
                                                                'info',
@@ -655,6 +627,7 @@ if __name__ == '__main__':
    ip = ''
    proxy = False
    proxy_port = 8000
+   ssdp_version = 1
    for opt, arg in opts:
       if opt in ('-h', '--help'):
          usage()
@@ -675,6 +648,8 @@ if __name__ == '__main__':
          device = arg
       elif opt in ('-t', '--timeout'):
          timeout = float(arg)
+      elif opt in ('--ssdp-version'):
+         ssdp_version = int(arg)
       elif opt in ('-i', '--ip'):
          ip = arg
          compatibleOnly = False
@@ -699,8 +674,8 @@ if __name__ == '__main__':
 
    logging.basicConfig(level=logLevel)
 
-   st = URN_AVTransport if compatibleOnly else SSDP_ALL
-   allDevices = discover(name=device, ip=ip, timeout=timeout, st=st)
+   st = URN_AVTransport_Fmt if compatibleOnly else SSDP_ALL
+   allDevices = discover(name=device, ip=ip, timeout=timeout, st=st, ssdp_version=ssdp_version)
    if not allDevices:
       print('No compatible devices found.')
       sys.exit(1)
@@ -732,7 +707,7 @@ if __name__ == '__main__':
       try:
          d.stop()
          url = 'http://{}:{}/{}'.format(ip, proxy_port, url) if proxy else url
-         d.set_current(url=url)
+         d.set_current_media(url=url)
          d.play()
       except Exception as e:
          print('Device is unable to play media.')
@@ -743,9 +718,9 @@ if __name__ == '__main__':
    elif action == 'stop':
       d.stop()
    elif action == 'info':
-      d.info()
+      print(d.info())
    elif action == 'media-info':
-      d.media_info()
+      print(d.media_info())
 
    if proxy:
       t.join()
