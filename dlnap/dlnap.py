@@ -18,10 +18,11 @@
 #   0.11 sync proxy for py2 and py3 implemented, --proxy-port added
 #   0.12 local files can be played as well now via proxy
 #   0.13 ssdp protocol version argument added
+#   0.14 fixed bug with receiving responses from device
 #
 #   1.0  moved from idea version
 
-__version__ = "0.13"
+__version__ = "0.14"
 
 import re
 import sys
@@ -349,9 +350,11 @@ def _send_tcp(to, payload):
       errorDescription = _xpath(data, 's:Envelope/s:Body/s:Fault/detail/UPnPError/errorDescription')
       if errorDescription is not None:
          logging.error(errorDescription)
-      return data
+   except Exception as e:
+      data = ''
    finally:
       sock.close()
+   return data
 
 def _get_location_url(raw):
    """ Extract device description url from discovery response
@@ -420,7 +423,7 @@ class DlnapDevice:
       return self.name == d.name and self.ip == d.ip
 
    def _payload_from_template(self, action, data, urn):
-      """
+      """ Assembly payload from template.
       """
       fields = ''
       for tag, value in data.items():
