@@ -17,9 +17,12 @@ Simple network player for DLNA/UPnP devices allows you discover devices and play
 - [x] Stop/Pause playback
 - [x] Investigate if it possible to play images/video's on DLNA/UPnP powered TV (possible via [download proxy](https://github.com/cherezov/dlnap#proxy))
  
-## Supported devices
- * Yamaha RX577
- * Samsung Smart TV (UE40ES5507) via [proxy](https://github.com/cherezov/dlnap#proxy)
+## Supported devices/software
+ - [x] Yamaha RX577
+ - [x] Samsung Smart TV (UE40ES5507) via [proxy](https://github.com/cherezov/dlnap#proxy)
+ - [x] Marantz MR611
+ - [x] [Kodi](https://kodi.tv/)
+ - [ ] [Volumio2](https://github.com/volumio/Volumio2) (?)
  * _please email me if it works or doesn't work with your device_
  
 ## Usage
