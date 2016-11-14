@@ -7,6 +7,7 @@ Simple network player for DLNA/UPnP devices allows you discover devices and play
  * [youtube-dl](https://github.com/rg3/youtube-dl) to playback YouTube links
  
 ## TODO
+- [ ] Fix '&' bug
 - [ ] Set next media
 - [ ] Volume control
 - [ ] Add support to play media from local machine, e.g --play /home/username/media/music.mp3 for py3
