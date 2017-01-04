@@ -34,6 +34,7 @@ import traceback
 import mimetypes
 from contextlib import contextmanager
 
+
 import os
 py3 = sys.version_info[0] == 3
 if py3:
@@ -51,6 +52,10 @@ import threading
 SSDP_GROUP = ("239.255.255.250", 1900)
 URN_AVTransport = "urn:schemas-upnp-org:service:AVTransport:1"
 URN_AVTransport_Fmt = "urn:schemas-upnp-org:service:AVTransport:{}"
+
+URN_RenderingControl = "urn:schemas-upnp-org:service:RenderingControl:1"
+URN_RenderingControl_Fmt = "urn:schemas-upnp-org:service:RenderingControl:{}"
+
 SSDP_ALL = "ssdp:all"
 
 # =================================================================================================
@@ -119,6 +124,7 @@ def _get_tag_value(x, i = 0):
    return (tag.strip(), value[:-1], x[i+1:])
 
 def _xml2dict(s, ignoreUntilXML = False):
+
    """ Convert xml to dictionary.
 
    <?xml version="1.0"?>
@@ -343,10 +349,11 @@ def _send_tcp(to, payload):
       sock.connect(to)
       sock.sendall(payload.encode('utf-8'))
 
-      data = sock.recv(2048)
+      data = (sock.recv(2048))
       if py3:
          data = data.decode('utf-8')
       data = _xml2dict(_unescape_xml(data), True)
+
       errorDescription = _xpath(data, 's:Envelope/s:Body/s:Fault/detail/UPnPError/errorDescription')
       if errorDescription is not None:
          logging.error(errorDescription)
@@ -355,6 +362,8 @@ def _send_tcp(to, payload):
    finally:
       sock.close()
    return data
+
+
 
 def _get_location_url(raw):
    """ Extract device description url from discovery response
@@ -390,6 +399,7 @@ class DlnapDevice:
       self.port = None
       self.name = 'Unknown'
       self.control_url = None
+      self.rendering_control_url = None
       self.has_av_transport = False
 
       try:
@@ -410,6 +420,9 @@ class DlnapDevice:
 
          self.control_url = _get_control_url(self.__desc_xml, URN_AVTransport)
          self.__logger.info('control_url: {}'.format(self.control_url))
+
+         self.rendering_control_url = _get_control_url(self.__desc_xml, URN_RenderingControl)
+         self.__logger.info('rendering_control_url: {}'.format(self.rendering_control_url))
 
          self.has_av_transport = self.control_url is not None
          self.__logger.info('=> Initialization completed'.format(ip))
@@ -445,12 +458,16 @@ class DlnapDevice:
       action -- control action
       data -- dictionary with XML fields value
       """
-
-      urn = URN_AVTransport_Fmt.format(self.ssdp_version)
+      if action in ["SetVolume", "SetMute", "GetVolume"]:
+          url = self.rendering_control_url
+          urn = URN_RenderingControl_Fmt.format(self.ssdp_version)
+      else:
+          url = self.control_url
+          urn = URN_AVTransport_Fmt.format(self.ssdp_version)
       payload = self._payload_from_template(action=action, data=data, urn=urn)
 
       packet = "\r\n".join([
-         'POST {} HTTP/1.1'.format(self.control_url),
+         'POST {} HTTP/1.1'.format(url),
          'User-Agent: {}/{}'.format(__file__, __version__),
          'Accept: */*',
          'Content-Type: text/xml; charset="utf-8"',
@@ -461,6 +478,7 @@ class DlnapDevice:
          '',
          payload,
          ])
+
       self.__logger.debug(packet)
       return packet
 
@@ -495,6 +513,32 @@ class DlnapDevice:
       instance_id -- device instance id
       """
       packet = self._create_packet('Stop', {'InstanceID': instance_id, 'Speed': 1})
+      _send_tcp((self.ip, self.port), packet)
+
+   def volume(self, volume=10, instance_id = 0):
+      """ Stop media that is currently playing back.
+
+      instance_id -- device instance id
+      """
+      packet = self._create_packet('SetVolume', {'InstanceID': instance_id, 'DesiredVolume': volume, 'Channel': 'Master'})
+
+      _send_tcp((self.ip, self.port), packet)
+
+
+   def mute(self, instance_id = 0):
+      """ Stop media that is currently playing back.
+
+      instance_id -- device instance id
+      """
+      packet = self._create_packet('SetMute', {'InstanceID': instance_id, 'DesiredMute': '1', 'Channel': 'Master'})
+      _send_tcp((self.ip, self.port), packet)
+
+   def unmute(self, instance_id = 0):
+      """ Stop media that is currently playing back.
+
+      instance_id -- device instance id
+      """
+      packet = self._create_packet('SetMute', {'InstanceID': instance_id, 'DesiredMute': '0', 'Channel': 'Master'})
       _send_tcp((self.ip, self.port), packet)
 
    def info(self, instance_id=0):
@@ -605,6 +649,10 @@ if __name__ == '__main__':
                                                                'play=',
                                                                'pause',
                                                                'stop',
+                                                               'volume',
+                                                               'mute',
+                                                               'unmute',
+
 
                                                                # discover arguments
                                                                'list',
@@ -668,6 +716,12 @@ if __name__ == '__main__':
          action = 'pause'
       elif opt in ('--stop'):
          action = 'stop'
+      elif opt in ('--volume'):
+         action = 'volume'
+      elif opt in ('--mute'):
+         action = 'mute'
+      elif opt in ('--unmute'):
+         action = 'unmute'
       elif opt in ('--info'):
          action = 'info'
       elif opt in ('--media-info'):
@@ -722,6 +776,12 @@ if __name__ == '__main__':
       d.pause()
    elif action == 'stop':
       d.stop()
+   elif action == 'volume':
+      d.volume()
+   elif action == 'mute':
+      d.mute()
+   elif action == 'unmute':
+      d.unmute()
    elif action == 'info':
       print(d.info())
    elif action == 'media-info':
