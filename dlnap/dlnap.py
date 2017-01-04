@@ -349,7 +349,7 @@ def _send_tcp(to, payload):
       sock.connect(to)
       sock.sendall(payload.encode('utf-8'))
 
-      data = (sock.recv(2048))
+      data = sock.recv(2048)
       if py3:
          data = data.decode('utf-8')
       data = _xml2dict(_unescape_xml(data), True)
@@ -626,6 +626,9 @@ if __name__ == '__main__':
       print(' --play <url> - set current url for play and start playback it. In case of url is empty - continue playing recent media.')
       print(' --pause - pause current playback')
       print(' --stop - stop current playback')
+      print(' --mute - mute playback')
+      print(' --unmute - unmute playback')
+      print(' --volume <vol> - set current volume for playback')
       print(' --timeout <seconds> - discover timeout')
       print(' --ssdp-version <version> - discover devices by protocol version, default 1')
       print(' --proxy - use local proxy on proxy port')
@@ -649,7 +652,7 @@ if __name__ == '__main__':
                                                                'play=',
                                                                'pause',
                                                                'stop',
-                                                               'volume',
+                                                               'volume=',
                                                                'mute',
                                                                'unmute',
 
@@ -673,6 +676,7 @@ if __name__ == '__main__':
 
    device = ''
    url = ''
+   vol = 10
    timeout = 1
    action = ''
    logLevel = logging.WARN
@@ -718,6 +722,7 @@ if __name__ == '__main__':
          action = 'stop'
       elif opt in ('--volume'):
          action = 'volume'
+         vol = arg
       elif opt in ('--mute'):
          action = 'mute'
       elif opt in ('--unmute'):
@@ -777,7 +782,7 @@ if __name__ == '__main__':
    elif action == 'stop':
       d.stop()
    elif action == 'volume':
-      d.volume()
+      d.volume(vol)
    elif action == 'mute':
       d.mute()
    elif action == 'unmute':
