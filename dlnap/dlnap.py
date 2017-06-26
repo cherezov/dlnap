@@ -574,6 +574,15 @@ class DlnapDevice:
       packet = self._create_packet('GetMediaInfo', {'InstanceID': instance_id})
       return _send_tcp((self.ip, self.port), packet)
 
+
+   def position_info(self, instance_id=0):
+      """ Position info.
+      instance_id -- device instance id
+      """
+      packet = self._create_packet('GetPositionInfo', {'InstanceID': instance_id})
+      return _send_tcp((self.ip, self.port), packet)
+
+
    def set_next(self, url):
       pass
 
