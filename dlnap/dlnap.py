@@ -515,6 +515,15 @@ class DlnapDevice:
       packet = self._create_packet('Stop', {'InstanceID': instance_id, 'Speed': 1})
       _send_tcp((self.ip, self.port), packet)
 
+
+   def seek(self, position, instance_id = 0):
+      """
+      Seek position
+      """
+      packet = self._create_packet('Seek', {'InstanceID':instance_id, 'Unit':'REL_TIME', 'Target': position })
+      _send_tcp((self.ip, self.port), packet)
+
+
    def volume(self, volume=10, instance_id = 0):
       """ Stop media that is currently playing back.
 
@@ -522,6 +531,14 @@ class DlnapDevice:
       """
       packet = self._create_packet('SetVolume', {'InstanceID': instance_id, 'DesiredVolume': volume, 'Channel': 'Master'})
 
+      _send_tcp((self.ip, self.port), packet)
+      
+      
+   def get_volume(self, vol, instance_id = 0):
+      """
+      get volume
+      """
+      packet = self._create_packet('GetVolume', {'InstanceID':instance_id, 'Channel': 'Master'})
       _send_tcp((self.ip, self.port), packet)
 
 
@@ -556,6 +573,15 @@ class DlnapDevice:
       """
       packet = self._create_packet('GetMediaInfo', {'InstanceID': instance_id})
       return _send_tcp((self.ip, self.port), packet)
+
+
+   def position_info(self, instance_id=0):
+      """ Position info.
+      instance_id -- device instance id
+      """
+      packet = self._create_packet('GetPositionInfo', {'InstanceID': instance_id})
+      return _send_tcp((self.ip, self.port), packet)
+
 
    def set_next(self, url):
       pass
@@ -629,6 +655,7 @@ if __name__ == '__main__':
       print(' --mute - mute playback')
       print(' --unmute - unmute playback')
       print(' --volume <vol> - set current volume for playback')
+      print(' --seek <position in HH:MM:SS> - set current position for playback')
       print(' --timeout <seconds> - discover timeout')
       print(' --ssdp-version <version> - discover devices by protocol version, default 1')
       print(' --proxy - use local proxy on proxy port')
@@ -655,6 +682,7 @@ if __name__ == '__main__':
                                                                'volume=',
                                                                'mute',
                                                                'unmute',
+                                                               'seek=',
 
 
                                                                # discover arguments
@@ -677,6 +705,7 @@ if __name__ == '__main__':
    device = ''
    url = ''
    vol = 10
+   position = '00:00:00'
    timeout = 1
    action = ''
    logLevel = logging.WARN
@@ -723,6 +752,9 @@ if __name__ == '__main__':
       elif opt in ('--volume'):
          action = 'volume'
          vol = arg
+      elif opt in ('--seek'):
+         action = 'seek'
+         position = arg
       elif opt in ('--mute'):
          action = 'mute'
       elif opt in ('--unmute'):
@@ -783,6 +815,8 @@ if __name__ == '__main__':
       d.stop()
    elif action == 'volume':
       d.volume(vol)
+   elif action == 'seek':
+      d.seek(position)
    elif action == 'mute':
       d.mute()
    elif action == 'unmute':
