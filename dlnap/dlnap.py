@@ -515,6 +515,15 @@ class DlnapDevice:
       packet = self._create_packet('Stop', {'InstanceID': instance_id, 'Speed': 1})
       _send_tcp((self.ip, self.port), packet)
 
+
+   def seek(self, position, instance_id = 0):
+      """
+      Seek position
+      """
+      packet = self._create_packet('Seek', {'InstanceID':instance_id, 'Unit':'REL_TIME', 'Target': position })
+      _send_tcp((self.ip, self.port), packet)
+
+
    def volume(self, volume=10, instance_id = 0):
       """ Stop media that is currently playing back.
 
@@ -522,6 +531,14 @@ class DlnapDevice:
       """
       packet = self._create_packet('SetVolume', {'InstanceID': instance_id, 'DesiredVolume': volume, 'Channel': 'Master'})
 
+      _send_tcp((self.ip, self.port), packet)
+      
+      
+   def get_volume(self, vol, instance_id = 0):
+      """
+      get volume
+      """
+      packet = self._create_packet('GetVolume', {'InstanceID':instance_id, 'Channel': 'Master'})
       _send_tcp((self.ip, self.port), packet)
 
 
