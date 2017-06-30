@@ -337,7 +337,7 @@ def _unescape_xml(xml):
    """
    return xml.replace('&lt;', '<').replace('&gt;', '>').replace('&quot;', '"')
 
-def _send_tcp(to, payload):
+def return _send_tcp(to, payload):
    """ Send TCP message to group
 
    to -- (host, port) group to send to payload to
@@ -489,7 +489,7 @@ class DlnapDevice:
       instance_id -- device instance id
       """
       packet = self._create_packet('SetAVTransportURI', {'InstanceID':instance_id, 'CurrentURI':url, 'CurrentURIMetaData':'' })
-      _send_tcp((self.ip, self.port), packet)
+      return _send_tcp((self.ip, self.port), packet)
 
    def play(self, instance_id = 0):
       """ Play media that was already set as current.
@@ -497,7 +497,7 @@ class DlnapDevice:
       instance_id -- device instance id
       """
       packet = self._create_packet('Play', {'InstanceID': instance_id, 'Speed': 1})
-      _send_tcp((self.ip, self.port), packet)
+      return _send_tcp((self.ip, self.port), packet)
 
    def pause(self, instance_id = 0):
       """ Pause media that is currently playing back.
@@ -505,7 +505,7 @@ class DlnapDevice:
       instance_id -- device instance id
       """
       packet = self._create_packet('Pause', {'InstanceID': instance_id, 'Speed':1})
-      _send_tcp((self.ip, self.port), packet)
+      return _send_tcp((self.ip, self.port), packet)
 
    def stop(self, instance_id = 0):
       """ Stop media that is currently playing back.
@@ -513,7 +513,7 @@ class DlnapDevice:
       instance_id -- device instance id
       """
       packet = self._create_packet('Stop', {'InstanceID': instance_id, 'Speed': 1})
-      _send_tcp((self.ip, self.port), packet)
+      return _send_tcp((self.ip, self.port), packet)
 
 
    def seek(self, position, instance_id = 0):
@@ -521,7 +521,7 @@ class DlnapDevice:
       Seek position
       """
       packet = self._create_packet('Seek', {'InstanceID':instance_id, 'Unit':'REL_TIME', 'Target': position })
-      _send_tcp((self.ip, self.port), packet)
+      return _send_tcp((self.ip, self.port), packet)
 
 
    def volume(self, volume=10, instance_id = 0):
@@ -531,7 +531,7 @@ class DlnapDevice:
       """
       packet = self._create_packet('SetVolume', {'InstanceID': instance_id, 'DesiredVolume': volume, 'Channel': 'Master'})
 
-      _send_tcp((self.ip, self.port), packet)
+      return _send_tcp((self.ip, self.port), packet)
       
       
    def get_volume(self, vol, instance_id = 0):
@@ -539,7 +539,7 @@ class DlnapDevice:
       get volume
       """
       packet = self._create_packet('GetVolume', {'InstanceID':instance_id, 'Channel': 'Master'})
-      _send_tcp((self.ip, self.port), packet)
+      return _send_tcp((self.ip, self.port), packet)
 
 
    def mute(self, instance_id = 0):
@@ -548,7 +548,7 @@ class DlnapDevice:
       instance_id -- device instance id
       """
       packet = self._create_packet('SetMute', {'InstanceID': instance_id, 'DesiredMute': '1', 'Channel': 'Master'})
-      _send_tcp((self.ip, self.port), packet)
+      return _send_tcp((self.ip, self.port), packet)
 
    def unmute(self, instance_id = 0):
       """ Stop media that is currently playing back.
@@ -556,7 +556,7 @@ class DlnapDevice:
       instance_id -- device instance id
       """
       packet = self._create_packet('SetMute', {'InstanceID': instance_id, 'DesiredMute': '0', 'Channel': 'Master'})
-      _send_tcp((self.ip, self.port), packet)
+      return _send_tcp((self.ip, self.port), packet)
 
    def info(self, instance_id=0):
       """ Transport info.
