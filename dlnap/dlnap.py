@@ -337,7 +337,7 @@ def _unescape_xml(xml):
    """
    return xml.replace('&lt;', '<').replace('&gt;', '>').replace('&quot;', '"')
 
-def return _send_tcp(to, payload):
+def _send_tcp(to, payload):
    """ Send TCP message to group
 
    to -- (host, port) group to send to payload to
