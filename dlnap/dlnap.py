@@ -534,7 +534,7 @@ class DlnapDevice:
       _send_tcp((self.ip, self.port), packet)
       
       
-   def get_volume(self, vol, instance_id = 0):
+   def get_volume(self, instance_id = 0):
       """
       get volume
       """
