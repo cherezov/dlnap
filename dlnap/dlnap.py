@@ -38,13 +38,13 @@ from contextlib import contextmanager
 import os
 py3 = sys.version_info[0] == 3
 if py3:
-   from urllib.request import urlopen
-   from http.server import HTTPServer
-   from http.server import BaseHTTPRequestHandler
+    from urllib.request import urlopen
+    from http.server import HTTPServer
+    from http.server import BaseHTTPRequestHandler
 else:
-   from urllib2 import urlopen
-   from BaseHTTPServer import BaseHTTPRequestHandler
-   from BaseHTTPServer import HTTPServer
+    from urllib2 import urlopen
+    from BaseHTTPServer import BaseHTTPRequestHandler
+    from BaseHTTPServer import HTTPServer
 
 import shutil
 import threading
@@ -384,7 +384,7 @@ def _get_location_url(raw):
     return -- location url string
     """
     t = re.findall('\n(?i)location:\s*(.*)\r\s*', raw, re.M)
-    if len(t) >= 1:
+    if len(t) > 0:
         return t[0]
     return ''
 
