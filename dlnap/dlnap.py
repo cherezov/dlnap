@@ -365,7 +365,7 @@ def _send_tcp(to, payload):
 
 
 
-def _get_location_url(raw):
+def _get_location_url_old(raw):
    """ Extract device description url from discovery response
 
    raw -- raw discovery response
@@ -375,6 +375,18 @@ def _get_location_url(raw):
       if d.lower().startswith('location:'):
          return re.findall('location:\s*(.*)\s*', d, re.I)[0]
    return ''
+
+
+def _get_location_url(raw):
+    """ Extract device description url from discovery response
+
+    raw -- raw discovery response
+    return -- location url string
+    """
+    t = re.findall('\n(?i)location:\s*(.*)\r\s*', raw, re.M)
+    if len(t) >= 1:
+        return t[0]
+    return ''
 
 def _get_friendly_name(xml):
    """ Extract device name from description xml
