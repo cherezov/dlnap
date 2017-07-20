@@ -38,13 +38,13 @@ from contextlib import contextmanager
 import os
 py3 = sys.version_info[0] == 3
 if py3:
-   from urllib.request import urlopen
-   from http.server import HTTPServer
-   from http.server import BaseHTTPRequestHandler
+    from urllib.request import urlopen
+    from http.server import HTTPServer
+    from http.server import BaseHTTPRequestHandler
 else:
-   from urllib2 import urlopen
-   from BaseHTTPServer import BaseHTTPRequestHandler
-   from BaseHTTPServer import HTTPServer
+    from urllib2 import urlopen
+    from BaseHTTPServer import BaseHTTPRequestHandler
+    from BaseHTTPServer import HTTPServer
 
 import shutil
 import threading
@@ -364,17 +364,16 @@ def _send_tcp(to, payload):
    return data
 
 
-
 def _get_location_url(raw):
-   """ Extract device description url from discovery response
+    """ Extract device description url from discovery response
 
-   raw -- raw discovery response
-   return -- location url string
-   """
-   for d in raw.split('\r\n'):
-      if d.lower().startswith('location:'):
-         return re.findall('location:\s*(.*)\s*', d, re.I)[0]
-   return ''
+    raw -- raw discovery response
+    return -- location url string
+    """
+    t = re.findall('\n(?i)location:\s*(.*)\r\s*', raw, re.M)
+    if len(t) > 0:
+        return t[0]
+    return ''
 
 def _get_friendly_name(xml):
    """ Extract device name from description xml
@@ -534,7 +533,7 @@ class DlnapDevice:
       _send_tcp((self.ip, self.port), packet)
       
       
-   def get_volume(self, vol, instance_id = 0):
+   def get_volume(self, instance_id = 0):
       """
       get volume
       """
