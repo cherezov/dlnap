@@ -364,19 +364,6 @@ def _send_tcp(to, payload):
    return data
 
 
-
-def _get_location_url_old(raw):
-   """ Extract device description url from discovery response
-
-   raw -- raw discovery response
-   return -- location url string
-   """
-   for d in raw.split('\r\n'):
-      if d.lower().startswith('location:'):
-         return re.findall('location:\s*(.*)\s*', d, re.I)[0]
-   return ''
-
-
 def _get_location_url(raw):
     """ Extract device description url from discovery response
 
