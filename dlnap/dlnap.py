@@ -112,6 +112,12 @@ def _get_tag_value(x, i = 0):
       i += 1
 
    i += 1 # >
+   
+   # replace self-closing <tag/> by <tag>None</tag> 
+   empty_elmt = '<' + tag + ' />'
+   closed_elmt = '<' + tag + '>None</'+tag+'>'
+   if x.startswith(empty_elmt):
+      x = x.replace(empty_elmt, closed_elmt)
 
    while i < len(x):
       value += x[i]
