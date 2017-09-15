@@ -376,6 +376,18 @@ def _get_friendly_name(xml):
    name = _xpath(xml, 'root/device/friendlyName')
    return name if name is not None else 'Unknown'
 
+def _get_serve_ip(target_ip, target_port=80):
+    """ Find ip address of network interface used to communicate with target
+    
+    target-ip -- ip address of target
+    return -- ip address of interface connected to target
+    """
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect((target_ip, target_port))
+    my_ip = s.getsockname()[0]
+    s.close()
+    return my_ip
+
 class DlnapDevice:
    """ Represents DLNA/UPnP device.
    """
@@ -703,7 +715,7 @@ if __name__ == '__main__':
       proxy = True
 
    if proxy:
-      ip = socket.gethostbyname(socket.gethostname())
+      ip = _get_serve_ip(d.ip)
       t = threading.Thread(target=runProxy, kwargs={'ip' : ip, 'port' : proxy_port})
       t.start()
       time.sleep(2)
