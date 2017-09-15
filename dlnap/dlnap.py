@@ -19,10 +19,11 @@
 #   0.12 local files can be played as well now via proxy
 #   0.13 ssdp protocol version argument added
 #   0.14 fixed bug with receiving responses from device
+#   0.15 Lot's of fixes and features added thanks @ttopholm and @NicoPy
 #
 #   1.0  moved from idea version
 
-__version__ = "0.14"
+__version__ = "0.15"
 
 import re
 import sys
