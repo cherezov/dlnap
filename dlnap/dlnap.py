@@ -28,6 +28,7 @@ __version__ = "0.15"
 import re
 import sys
 import time
+import signal
 import socket
 import select
 import logging
@@ -659,6 +660,15 @@ def discover(name = '', ip = '', timeout = 1, st = SSDP_ALL, mx = 3, ssdp_versio
              pass
    return devices
 
+#
+# Signal of Ctrl+C
+# =================================================================================================
+def signal_handler(signal, frame):
+   print(' Got Ctrl + C, exit now!')
+   sys.exit(1)
+
+signal.signal(signal.SIGINT, signal_handler)
+
 if __name__ == '__main__':
    import getopt
 
@@ -814,6 +824,7 @@ if __name__ == '__main__':
    if proxy:
       ip = _get_serve_ip(d.ip)
       t = threading.Thread(target=runProxy, kwargs={'ip' : ip, 'port' : proxy_port})
+      t.daemon = True
       t.start()
       time.sleep(2)
 
@@ -845,4 +856,5 @@ if __name__ == '__main__':
       print(d.media_info())
 
    if proxy:
-      t.join()
+      while running:
+         time.sleep(30)
